@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Blocks, ShieldCheck, GraduationCap, Users, Building2, ArrowRight, Lock, Link2 } from "lucide-react";
+import { Blocks, ShieldCheck, GraduationCap, Users, Building2, ArrowRight, Lock, Link2, FileCheck2, Search, ClipboardCheck, Megaphone, Settings2, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/")({
@@ -88,21 +88,69 @@ function Landing() {
         </div>
       </section>
 
-      <section id="recursos" className="max-w-6xl mx-auto px-6 py-16 grid md:grid-cols-3 gap-6">
-        {[
-          { icon: GraduationCap, title: "Educação com confiança", desc: "Instituições certificadas passam por auditorias rigorosas registradas em blockchain." },
-          { icon: ShieldCheck, title: "Segurança e imutabilidade", desc: "Nenhum registro pode ser apagado ou adulterado — histórico público e verificável." },
-          { icon: Blocks, title: "Rastreabilidade total", desc: "Cada evento (selo, auditoria, denúncia) é um bloco na cadeia com hash único." },
-        ].map((f) => (
-          <div key={f.title} className="bg-card border rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="size-11 rounded-lg bg-primary/10 text-primary grid place-items-center">
-              <f.icon className="size-5" />
-            </div>
-            <h3 className="mt-4 font-semibold">{f.title}</h3>
-            <p className="mt-1 text-sm text-muted-foreground">{f.desc}</p>
+      <section id="como" className="max-w-6xl mx-auto px-6 py-16">
+        <div className="text-center max-w-2xl mx-auto">
+          <div className="inline-flex items-center gap-2 text-xs font-medium bg-accent px-3 py-1 rounded-full text-accent-foreground">
+            <ClipboardCheck className="size-3" /> Fluxo transparente
           </div>
-        ))}
+          <h2 className="mt-4 text-3xl font-bold tracking-tight">Como funciona</h2>
+          <p className="mt-3 text-muted-foreground">
+            Um processo simples, auditável e verificável — do pedido de certificação à consulta pública.
+          </p>
+        </div>
+
+        <div className="mt-10 grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            { icon: FileCheck2, title: "Solicitação de certificação", desc: "A instituição envia seus dados e documentos para iniciar o processo de certificação." },
+            { icon: ShieldCheck, title: "Auditoria especializada", desc: "Auditores avaliam critérios pedagógicos, administrativos e legais com rigor técnico." },
+            { icon: Blocks, title: "Registro transparente", desc: "Cada etapa é registrada em blockchain, com hash único e histórico imutável." },
+            { icon: Search, title: "Consulta pelos responsáveis", desc: "Cidadãos e responsáveis consultam certificações e histórico de forma pública." },
+          ].map((s, i) => (
+            <div key={s.title} className="relative bg-card border rounded-xl p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+              <div className="absolute -top-3 -left-3 size-8 rounded-full bg-gradient-to-br from-primary to-secondary text-primary-foreground text-sm font-semibold grid place-items-center shadow-md">
+                {i + 1}
+              </div>
+              <div className="size-11 rounded-lg bg-primary/10 text-primary grid place-items-center">
+                <s.icon className="size-5" />
+              </div>
+              <h3 className="mt-4 font-semibold">{s.title}</h3>
+              <p className="mt-1 text-sm text-muted-foreground leading-relaxed">{s.desc}</p>
+            </div>
+          ))}
+        </div>
       </section>
+
+      <section id="recursos" className="max-w-6xl mx-auto px-6 py-16">
+        <div className="text-center max-w-2xl mx-auto">
+          <div className="inline-flex items-center gap-2 text-xs font-medium bg-secondary/20 px-3 py-1 rounded-full text-secondary-foreground">
+            <Blocks className="size-3" /> Recursos da plataforma
+          </div>
+          <h2 className="mt-4 text-3xl font-bold tracking-tight">Tudo em um só lugar</h2>
+          <p className="mt-3 text-muted-foreground">
+            Ferramentas completas para instituições, auditores e cidadãos — com a segurança da blockchain.
+          </p>
+        </div>
+
+        <div className="mt-10 grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[
+            { icon: GraduationCap, title: "Certificação de instituições", desc: "Emissão de selos oficiais após auditoria criteriosa, com validade verificável." },
+            { icon: Search, title: "Consulta pública", desc: "Qualquer cidadão pode verificar status, selos e histórico de uma instituição." },
+            { icon: History, title: "Histórico blockchain", desc: "Cadeia de blocos imutável com todos os eventos: emissões, auditorias e atualizações." },
+            { icon: Megaphone, title: "Canal de denúncias", desc: "Cidadãos podem registrar denúncias de forma segura, com rastreabilidade total." },
+            { icon: Settings2, title: "Gestão institucional", desc: "Portal completo para acompanhar certificações, auditorias e relatórios." },
+            { icon: ShieldCheck, title: "Segurança e imutabilidade", desc: "Nenhum registro pode ser adulterado — a confiança é garantida pela criptografia." },
+          ].map((f) => (
+            <div key={f.title} className="group bg-card border rounded-xl p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+              <div className="size-11 rounded-lg bg-gradient-to-br from-primary/10 to-secondary/20 text-primary grid place-items-center group-hover:scale-110 transition-transform">
+                <f.icon className="size-5" />
+              </div>
+              <h3 className="mt-4 font-semibold">{f.title}</h3>
+              <p className="mt-1 text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
 
       <footer className="border-t bg-card/60">
         <div className="max-w-6xl mx-auto px-6 py-8 text-xs text-muted-foreground flex justify-between">
