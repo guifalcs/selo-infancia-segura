@@ -89,18 +89,18 @@ function Landing() {
         </div>
       </section>
 
-      <section id="como" className="max-w-6xl mx-auto px-6 py-16">
+      <section id="como" className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
         <div className="text-center max-w-2xl mx-auto">
           <div className="inline-flex items-center gap-2 text-xs font-medium bg-accent px-3 py-1 rounded-full text-accent-foreground">
             <ClipboardCheck className="size-3" /> Fluxo transparente
           </div>
-          <h2 className="mt-4 text-3xl font-bold tracking-tight">Como funciona</h2>
+          <h2 className="mt-4 text-2xl sm:text-3xl font-bold tracking-tight">Como funciona</h2>
           <p className="mt-3 text-muted-foreground">
             Um processo simples, auditável e verificável — do pedido de certificação à consulta pública.
           </p>
         </div>
 
-        <div className="mt-10 grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
             { icon: FileCheck2, title: "Solicitação de certificação", desc: "A instituição envia seus dados e documentos para iniciar o processo de certificação." },
             { icon: ShieldCheck, title: "Auditoria especializada", desc: "Auditores avaliam critérios pedagógicos, administrativos e legais com rigor técnico." },
@@ -121,18 +121,18 @@ function Landing() {
         </div>
       </section>
 
-      <section id="recursos" className="max-w-6xl mx-auto px-6 py-16">
+      <section id="recursos" className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
         <div className="text-center max-w-2xl mx-auto">
           <div className="inline-flex items-center gap-2 text-xs font-medium bg-secondary/20 px-3 py-1 rounded-full text-secondary-foreground">
             <Blocks className="size-3" /> Recursos da plataforma
           </div>
-          <h2 className="mt-4 text-3xl font-bold tracking-tight">Tudo em um só lugar</h2>
+          <h2 className="mt-4 text-2xl sm:text-3xl font-bold tracking-tight">Tudo em um só lugar</h2>
           <p className="mt-3 text-muted-foreground">
             Ferramentas completas para instituições, auditores e cidadãos — com a segurança da blockchain.
           </p>
         </div>
 
-        <div className="mt-10 grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {[
             { icon: GraduationCap, title: "Certificação de instituições", desc: "Emissão de selos oficiais após auditoria criteriosa, com validade verificável." },
             { icon: Search, title: "Consulta pública", desc: "Qualquer cidadão pode verificar status, selos e histórico de uma instituição." },
@@ -154,7 +154,7 @@ function Landing() {
 
 
       <footer className="border-t bg-card/60">
-        <div className="max-w-6xl mx-auto px-6 py-8 text-xs text-muted-foreground flex justify-between">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 text-xs text-muted-foreground flex flex-col sm:flex-row gap-2 sm:gap-0 justify-between text-center sm:text-left">
           <span>© 2026 YC Blockchain — Protótipo institucional</span>
           <span>Transparência • Segurança • Educação</span>
         </div>
