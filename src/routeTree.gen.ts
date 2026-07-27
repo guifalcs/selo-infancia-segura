@@ -10,33 +10,154 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PortalRelatoriosRouteImport } from './routes/portal.relatorios'
+import { Route as PortalLoginRouteImport } from './routes/portal.login'
+import { Route as PortalInstituicoesRouteImport } from './routes/portal.instituicoes'
+import { Route as PortalDashboardRouteImport } from './routes/portal.dashboard'
+import { Route as PortalCertificacoesRouteImport } from './routes/portal.certificacoes'
+import { Route as PortalAuditoriasRouteImport } from './routes/portal.auditorias'
+import { Route as CidadaoDenunciaRouteImport } from './routes/cidadao.denuncia'
+import { Route as CidadaoConsultaRouteImport } from './routes/cidadao.consulta'
+import { Route as CidadaoInstituicaoIdRouteImport } from './routes/cidadao.instituicao.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PortalRelatoriosRoute = PortalRelatoriosRouteImport.update({
+  id: '/portal/relatorios',
+  path: '/portal/relatorios',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PortalLoginRoute = PortalLoginRouteImport.update({
+  id: '/portal/login',
+  path: '/portal/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PortalInstituicoesRoute = PortalInstituicoesRouteImport.update({
+  id: '/portal/instituicoes',
+  path: '/portal/instituicoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PortalDashboardRoute = PortalDashboardRouteImport.update({
+  id: '/portal/dashboard',
+  path: '/portal/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PortalCertificacoesRoute = PortalCertificacoesRouteImport.update({
+  id: '/portal/certificacoes',
+  path: '/portal/certificacoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PortalAuditoriasRoute = PortalAuditoriasRouteImport.update({
+  id: '/portal/auditorias',
+  path: '/portal/auditorias',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CidadaoDenunciaRoute = CidadaoDenunciaRouteImport.update({
+  id: '/cidadao/denuncia',
+  path: '/cidadao/denuncia',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CidadaoConsultaRoute = CidadaoConsultaRouteImport.update({
+  id: '/cidadao/consulta',
+  path: '/cidadao/consulta',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CidadaoInstituicaoIdRoute = CidadaoInstituicaoIdRouteImport.update({
+  id: '/cidadao/instituicao/$id',
+  path: '/cidadao/instituicao/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/cidadao/consulta': typeof CidadaoConsultaRoute
+  '/cidadao/denuncia': typeof CidadaoDenunciaRoute
+  '/portal/auditorias': typeof PortalAuditoriasRoute
+  '/portal/certificacoes': typeof PortalCertificacoesRoute
+  '/portal/dashboard': typeof PortalDashboardRoute
+  '/portal/instituicoes': typeof PortalInstituicoesRoute
+  '/portal/login': typeof PortalLoginRoute
+  '/portal/relatorios': typeof PortalRelatoriosRoute
+  '/cidadao/instituicao/$id': typeof CidadaoInstituicaoIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/cidadao/consulta': typeof CidadaoConsultaRoute
+  '/cidadao/denuncia': typeof CidadaoDenunciaRoute
+  '/portal/auditorias': typeof PortalAuditoriasRoute
+  '/portal/certificacoes': typeof PortalCertificacoesRoute
+  '/portal/dashboard': typeof PortalDashboardRoute
+  '/portal/instituicoes': typeof PortalInstituicoesRoute
+  '/portal/login': typeof PortalLoginRoute
+  '/portal/relatorios': typeof PortalRelatoriosRoute
+  '/cidadao/instituicao/$id': typeof CidadaoInstituicaoIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/cidadao/consulta': typeof CidadaoConsultaRoute
+  '/cidadao/denuncia': typeof CidadaoDenunciaRoute
+  '/portal/auditorias': typeof PortalAuditoriasRoute
+  '/portal/certificacoes': typeof PortalCertificacoesRoute
+  '/portal/dashboard': typeof PortalDashboardRoute
+  '/portal/instituicoes': typeof PortalInstituicoesRoute
+  '/portal/login': typeof PortalLoginRoute
+  '/portal/relatorios': typeof PortalRelatoriosRoute
+  '/cidadao/instituicao/$id': typeof CidadaoInstituicaoIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/cidadao/consulta'
+    | '/cidadao/denuncia'
+    | '/portal/auditorias'
+    | '/portal/certificacoes'
+    | '/portal/dashboard'
+    | '/portal/instituicoes'
+    | '/portal/login'
+    | '/portal/relatorios'
+    | '/cidadao/instituicao/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/cidadao/consulta'
+    | '/cidadao/denuncia'
+    | '/portal/auditorias'
+    | '/portal/certificacoes'
+    | '/portal/dashboard'
+    | '/portal/instituicoes'
+    | '/portal/login'
+    | '/portal/relatorios'
+    | '/cidadao/instituicao/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/cidadao/consulta'
+    | '/cidadao/denuncia'
+    | '/portal/auditorias'
+    | '/portal/certificacoes'
+    | '/portal/dashboard'
+    | '/portal/instituicoes'
+    | '/portal/login'
+    | '/portal/relatorios'
+    | '/cidadao/instituicao/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CidadaoConsultaRoute: typeof CidadaoConsultaRoute
+  CidadaoDenunciaRoute: typeof CidadaoDenunciaRoute
+  PortalAuditoriasRoute: typeof PortalAuditoriasRoute
+  PortalCertificacoesRoute: typeof PortalCertificacoesRoute
+  PortalDashboardRoute: typeof PortalDashboardRoute
+  PortalInstituicoesRoute: typeof PortalInstituicoesRoute
+  PortalLoginRoute: typeof PortalLoginRoute
+  PortalRelatoriosRoute: typeof PortalRelatoriosRoute
+  CidadaoInstituicaoIdRoute: typeof CidadaoInstituicaoIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,22 +169,84 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/portal/relatorios': {
+      id: '/portal/relatorios'
+      path: '/portal/relatorios'
+      fullPath: '/portal/relatorios'
+      preLoaderRoute: typeof PortalRelatoriosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/portal/login': {
+      id: '/portal/login'
+      path: '/portal/login'
+      fullPath: '/portal/login'
+      preLoaderRoute: typeof PortalLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/portal/instituicoes': {
+      id: '/portal/instituicoes'
+      path: '/portal/instituicoes'
+      fullPath: '/portal/instituicoes'
+      preLoaderRoute: typeof PortalInstituicoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/portal/dashboard': {
+      id: '/portal/dashboard'
+      path: '/portal/dashboard'
+      fullPath: '/portal/dashboard'
+      preLoaderRoute: typeof PortalDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/portal/certificacoes': {
+      id: '/portal/certificacoes'
+      path: '/portal/certificacoes'
+      fullPath: '/portal/certificacoes'
+      preLoaderRoute: typeof PortalCertificacoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/portal/auditorias': {
+      id: '/portal/auditorias'
+      path: '/portal/auditorias'
+      fullPath: '/portal/auditorias'
+      preLoaderRoute: typeof PortalAuditoriasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cidadao/denuncia': {
+      id: '/cidadao/denuncia'
+      path: '/cidadao/denuncia'
+      fullPath: '/cidadao/denuncia'
+      preLoaderRoute: typeof CidadaoDenunciaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cidadao/consulta': {
+      id: '/cidadao/consulta'
+      path: '/cidadao/consulta'
+      fullPath: '/cidadao/consulta'
+      preLoaderRoute: typeof CidadaoConsultaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cidadao/instituicao/$id': {
+      id: '/cidadao/instituicao/$id'
+      path: '/cidadao/instituicao/$id'
+      fullPath: '/cidadao/instituicao/$id'
+      preLoaderRoute: typeof CidadaoInstituicaoIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CidadaoConsultaRoute: CidadaoConsultaRoute,
+  CidadaoDenunciaRoute: CidadaoDenunciaRoute,
+  PortalAuditoriasRoute: PortalAuditoriasRoute,
+  PortalCertificacoesRoute: PortalCertificacoesRoute,
+  PortalDashboardRoute: PortalDashboardRoute,
+  PortalInstituicoesRoute: PortalInstituicoesRoute,
+  PortalLoginRoute: PortalLoginRoute,
+  PortalRelatoriosRoute: PortalRelatoriosRoute,
+  CidadaoInstituicaoIdRoute: CidadaoInstituicaoIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
