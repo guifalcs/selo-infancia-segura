@@ -22,7 +22,7 @@ export const Route = createFileRoute("/portal/auditorias")({
   }),
   component: () => (
     <PortalLayout title="Auditorias" subtitle="Registro completo de auditorias realizadas">
-      <div className="bg-card border rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-card border rounded-xl shadow-sm overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>

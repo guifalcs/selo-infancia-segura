@@ -30,8 +30,8 @@ function Denuncia() {
   return (
     <div className="min-h-screen bg-background">
       <BrandHeader />
-      <div className="max-w-2xl mx-auto px-6 py-12">
-        <h1 className="text-3xl font-bold">Canal de Denúncia</h1>
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+        <h1 className="text-2xl sm:text-3xl font-bold">Canal de Denúncia</h1>
         <p className="text-muted-foreground mt-1">
           Sua denúncia será registrada de forma anônima e segura na cadeia blockchain.
         </p>

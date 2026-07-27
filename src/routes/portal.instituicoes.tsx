@@ -15,25 +15,25 @@ export const Route = createFileRoute("/portal/instituicoes")({
   }),
   component: () => (
     <PortalLayout title="Instituições" subtitle="Todas as instituições registradas">
-      <div className="bg-card border rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-card border rounded-xl shadow-sm overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Cidade</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Última auditoria</TableHead>
+              <TableHead className="whitespace-nowrap">Nome</TableHead>
+              <TableHead className="whitespace-nowrap">Cidade</TableHead>
+              <TableHead className="whitespace-nowrap">Status</TableHead>
+              <TableHead className="whitespace-nowrap">Última auditoria</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {institutions.map((i) => (
               <TableRow key={i.id}>
-                <TableCell className="font-medium">{i.nome}</TableCell>
-                <TableCell className="text-muted-foreground">{i.cidade}</TableCell>
+                <TableCell className="font-medium whitespace-nowrap">{i.nome}</TableCell>
+                <TableCell className="text-muted-foreground whitespace-nowrap">{i.cidade}</TableCell>
                 <TableCell>
                   <Badge variant={i.status === "Suspensa" ? "destructive" : "secondary"}>{i.status}</Badge>
                 </TableCell>
-                <TableCell className="font-mono text-sm">{i.ultimaAuditoria}</TableCell>
+                <TableCell className="font-mono text-sm whitespace-nowrap">{i.ultimaAuditoria}</TableCell>
               </TableRow>
             ))}
           </TableBody>

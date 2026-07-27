@@ -41,12 +41,12 @@ function Consulta() {
   return (
     <div className="min-h-screen bg-background">
       <BrandHeader />
-      <div className="max-w-6xl mx-auto px-6 py-10">
-        <h1 className="text-3xl font-bold">Consulta de Instituições</h1>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+        <h1 className="text-2xl sm:text-3xl font-bold">Consulta de Instituições</h1>
         <p className="text-muted-foreground mt-1">Encontre e verifique instituições educacionais certificadas.</p>
 
-        <div className="mt-6 grid md:grid-cols-[1fr_200px_200px] gap-3">
-          <div className="relative">
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[1fr_200px_200px] gap-3">
+          <div className="relative sm:col-span-2 md:col-span-1">
             <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Pesquisar por nome..." className="pl-9" />
           </div>
@@ -69,7 +69,7 @@ function Consulta() {
           </Select>
         </div>
 
-        <div className="mt-8 grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="mt-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {filtered.map((i) => (
             <Link
               key={i.id}

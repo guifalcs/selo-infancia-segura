@@ -16,7 +16,7 @@ export const Route = createFileRoute("/portal/certificacoes")({
   }),
   component: () => (
     <PortalLayout title="Certificações" subtitle="Selos emitidos e registrados em blockchain">
-      <div className="bg-card border rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-card border rounded-xl shadow-sm overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
