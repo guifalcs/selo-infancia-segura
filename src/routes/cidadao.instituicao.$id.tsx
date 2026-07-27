@@ -32,23 +32,23 @@ function Detalhe() {
   return (
     <div className="min-h-screen bg-background">
       <BrandHeader />
-      <div className="max-w-4xl mx-auto px-6 py-10">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
         <Link to="/cidadao/consulta" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-4" /> Voltar à consulta
         </Link>
 
-        <div className="mt-6 bg-card border rounded-2xl p-8 shadow-sm">
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div>
-              <h1 className="text-2xl font-bold">{inst.nome}</h1>
+        <div className="mt-6 bg-card border rounded-2xl p-6 sm:p-8 shadow-sm">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 sm:flex sm:flex-wrap sm:justify-between">
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold break-words">{inst.nome}</h1>
               <div className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
-                <MapPin className="size-4" /> {inst.cidade}
+                <MapPin className="size-4 shrink-0" /> <span className="truncate">{inst.cidade}</span>
               </div>
             </div>
-            <Badge className="bg-secondary text-secondary-foreground">{inst.status}</Badge>
+            <Badge className="bg-secondary text-secondary-foreground shrink-0">{inst.status}</Badge>
           </div>
           <p className="mt-4 text-muted-foreground">{inst.descricao}</p>
-          <div className="mt-6 grid sm:grid-cols-3 gap-4">
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Info label="Selo" value={inst.selo} icon={ShieldCheck} />
             <Info label="Última auditoria" value={inst.ultimaAuditoria} />
             <Info label="ID Institucional" value={inst.id.toUpperCase()} />

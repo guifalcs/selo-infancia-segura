@@ -69,7 +69,7 @@ function Consulta() {
           </Select>
         </div>
 
-        <div className="mt-8 grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="mt-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {filtered.map((i) => (
             <Link
               key={i.id}
