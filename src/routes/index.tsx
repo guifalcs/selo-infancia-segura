@@ -17,29 +17,30 @@ export const Route = createFileRoute("/")({
 function Landing() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-accent/40">
-      <header className="max-w-6xl mx-auto flex items-center justify-between px-6 h-16">
-        <div className="flex items-center gap-2">
-          <div className="size-9 rounded-lg bg-gradient-to-br from-primary to-secondary grid place-items-center text-primary-foreground">
+      <header className="max-w-6xl mx-auto flex items-center justify-between px-4 sm:px-6 h-16 gap-4">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="size-9 shrink-0 rounded-lg bg-gradient-to-br from-primary to-secondary grid place-items-center text-primary-foreground">
             <Blocks className="size-5" />
           </div>
-          <span className="font-semibold">YC Blockchain</span>
+          <span className="font-semibold truncate">YC Blockchain</span>
         </div>
         <nav className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
           <a href="#como" className="hover:text-foreground">Como funciona</a>
           <a href="#recursos" className="hover:text-foreground">Recursos</a>
           <Link to="/portal/login" className="hover:text-foreground">Entrar</Link>
         </nav>
+        <Link to="/portal/login" className="md:hidden text-sm text-primary font-medium shrink-0">Entrar</Link>
       </header>
 
-      <section className="max-w-6xl mx-auto px-6 pt-16 pb-20 grid md:grid-cols-2 gap-12 items-center">
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-10 sm:pt-16 pb-16 sm:pb-20 grid md:grid-cols-2 gap-10 md:gap-12 items-center">
         <div>
           <div className="inline-flex items-center gap-2 text-xs font-medium bg-accent px-3 py-1 rounded-full text-accent-foreground">
             <Lock className="size-3" /> Certificação imutável via blockchain
           </div>
-          <h1 className="mt-5 text-5xl font-bold tracking-tight leading-tight">
+          <h1 className="mt-5 text-4xl sm:text-5xl font-bold tracking-tight leading-tight">
             YC <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Blockchain</span>
           </h1>
-          <p className="mt-4 text-xl text-foreground/80 font-medium">
+          <p className="mt-4 text-lg sm:text-xl text-foreground/80 font-medium">
             Confiança educacional, verificável por qualquer cidadão.
           </p>
           <p className="mt-4 text-muted-foreground leading-relaxed">
@@ -47,13 +48,13 @@ function Landing() {
             Cada auditoria, selo e denúncia é registrado de forma imutável em blockchain —
             garantindo segurança, rastreabilidade e confiança pública.
           </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Button asChild size="lg">
+          <div className="mt-8 flex flex-col sm:flex-row flex-wrap gap-3">
+            <Button asChild size="lg" className="w-full sm:w-auto">
               <Link to="/cidadao/consulta">
                 <Users className="size-4" /> Área do Cidadão <ArrowRight className="size-4" />
               </Link>
             </Button>
-            <Button asChild size="lg" variant="secondary">
+            <Button asChild size="lg" variant="secondary" className="w-full sm:w-auto">
               <Link to="/portal/login">
                 <Building2 className="size-4" /> Portal Institucional <ArrowRight className="size-4" />
               </Link>
@@ -63,7 +64,7 @@ function Landing() {
 
         <div className="relative">
           <div className="absolute -inset-8 bg-gradient-to-br from-primary/20 to-secondary/20 blur-3xl rounded-full" />
-          <div className="relative bg-card border rounded-2xl shadow-xl p-6 space-y-3">
+          <div className="relative bg-card border rounded-2xl shadow-xl p-4 sm:p-6 space-y-3">
             <div className="text-xs text-muted-foreground font-mono">CADEIA DE REGISTROS</div>
             {[
               { n: "#10521", t: "Certificação emitida", c: "primary" },
@@ -72,14 +73,14 @@ function Landing() {
             ].map((b, i) => (
               <div key={b.n} className="relative">
                 <div className="flex items-center gap-3 p-3 rounded-lg border bg-background">
-                  <div className={`size-10 rounded-md grid place-items-center text-primary-foreground ${b.c === "primary" ? "bg-primary" : "bg-secondary"}`}>
+                  <div className={`size-10 shrink-0 rounded-md grid place-items-center text-primary-foreground ${b.c === "primary" ? "bg-primary" : "bg-secondary"}`}>
                     <Blocks className="size-5" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-xs font-mono text-muted-foreground">Bloco {b.n}</div>
-                    <div className="text-sm font-medium">{b.t}</div>
+                    <div className="text-sm font-medium truncate">{b.t}</div>
                   </div>
-                  <div className="text-xs font-mono text-muted-foreground">0x{i}f2a…c41d</div>
+                  <div className="hidden sm:block text-xs font-mono text-muted-foreground shrink-0">0x{i}f2a…c41d</div>
                 </div>
                 {i < 2 && <Link2 className="size-4 mx-auto my-1 text-muted-foreground rotate-90" />}
               </div>
