@@ -102,7 +102,7 @@ export function SiteFooter() {
 
         <div className="mt-12 flex flex-col gap-2 border-t pt-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
           <p>
-            © {new Date().getFullYear()} SIS: Selo Infância Segura. Protótipo acadêmico sem vínculo
+            © {new Date().getFullYear()} SIS: Selo Infância Segura. Protótipo sem vínculo
             institucional com os órgãos citados.
           </p>
           <p>Dados exibidos são fictícios e servem apenas para demonstração.</p>

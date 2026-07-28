@@ -1,13 +1,20 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Megaphone, ShieldAlert, CheckCircle2, Clock3, ChevronRight } from "lucide-react";
+import { Megaphone, ShieldAlert, CheckCircle2, Clock3, ChevronRight, EyeOff } from "lucide-react";
 
 import { PortalLayout } from "@/components/PortalLayout";
-import { Indicador, Painel, Vazio, AvisoDemo } from "@/components/PortalUI";
+import { Indicador, Painel, Vazio, AvisoDemo, PrazoBadge } from "@/components/PortalUI";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { GravidadeBadge, StatusDenunciaBadge } from "@/components/DenunciaUI";
-import { denuncias, denunciaEmAberto, institutionPorId, type Denuncia } from "@/lib/mock-data";
+import {
+  denuncias,
+  denunciaAtrasada,
+  denunciaEmAberto,
+  denunciaPublica,
+  institutionPorId,
+  type Denuncia,
+} from "@/lib/mock-data";
 import type { Escopo } from "@/lib/portal-access";
 
 export const Route = createFileRoute("/portal/denuncias")({
@@ -45,6 +52,7 @@ function Fila({ escopo }: { escopo: Escopo }) {
   const procedentes = doEscopo.filter((d) => d.status === "Procedente");
   const graves = doEscopo.filter((d) => d.gravidade === "Alta" && denunciaEmAberto(d));
   const semTriagem = doEscopo.filter((d) => d.gravidade === null);
+  const atrasadas = doEscopo.filter(denunciaAtrasada);
 
   return (
     <div className="space-y-6">
@@ -54,8 +62,12 @@ function Fila({ escopo }: { escopo: Escopo }) {
           icon={ShieldAlert}
           label="Em aberto"
           valor={abertas.length}
-          detalhe="Recebidas ou em apuração"
-          tom={abertas.length ? "destructive" : "green"}
+          detalhe={
+            atrasadas.length
+              ? `${atrasadas.length} com prazo de apuração vencido`
+              : "Recebidas ou em apuração, todas no prazo"
+          }
+          tom={atrasadas.length ? "destructive" : abertas.length ? "amber" : "green"}
         />
         <Indicador
           icon={CheckCircle2}
@@ -157,9 +169,16 @@ function ItemDaFila({
           <Badge variant="outline" className="font-normal">
             {d.eixo}
           </Badge>
-          <span>
-            {denunciaEmAberto(d) ? `Prazo de apuração: ${d.prazo}` : `Encerrada · ${d.responsavel}`}
-          </span>
+          {denunciaEmAberto(d) ? (
+            <PrazoBadge prazo={d.prazo} />
+          ) : (
+            <span>Encerrada · {d.responsavel}</span>
+          )}
+          {!denunciaPublica(d) && (
+            <span className="inline-flex items-center gap-1">
+              <EyeOff className="size-3 shrink-0" aria-hidden /> fora da ficha pública até a triagem
+            </span>
+          )}
         </div>
       </div>
 

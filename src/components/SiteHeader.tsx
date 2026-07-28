@@ -11,7 +11,7 @@ import { BrandLockup } from "@/components/Brand";
  * A faixa superior escura é uma convenção de portal público (gov.br, portais
  * de tribunais, sites de agências): identifica a natureza da iniciativa antes
  * de qualquer conteúdo. Aqui ela cumpre também uma função de honestidade —
- * deixa explícito que este é um protótipo acadêmico, não um serviço em
+ * deixa explícito que este é um protótipo, não um serviço em
  * operação. Assumir isso aumenta a credibilidade em vez de reduzir.
  */
 
@@ -46,9 +46,8 @@ export function SiteHeader() {
           <p className="flex items-center gap-2">
             <Info className="size-3.5 shrink-0" aria-hidden />
             <span className="truncate">
-              Protótipo acadêmico ·{" "}
-              <span className="hidden sm:inline">iniciativa em desenvolvimento, </span>ainda não é
-              um serviço em operação
+              Protótipo · <span className="hidden sm:inline">iniciativa em desenvolvimento, </span>
+              ainda não é um serviço em operação
             </span>
           </p>
           <Link

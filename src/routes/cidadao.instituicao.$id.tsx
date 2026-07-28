@@ -15,13 +15,16 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { StatusBadge } from "@/components/StatusBadge";
 import { SubseloBadge } from "@/components/SubseloBadge";
 import { Seal } from "@/components/Seal";
+import { ValidadeBadge } from "@/components/PortalUI";
 import { Button } from "@/components/ui/button";
 import {
+  apuracaoDaInstituicao,
   institutionPorId,
   institutions,
-  registrosDaInstituicao,
+  PATAMAR_DE_REFERENCIA,
   type RegistroBlockchain,
 } from "@/lib/mock-data";
+import { useSelo } from "@/lib/selo-efetivo";
 
 export const Route = createFileRoute("/cidadao/instituicao/$id")({
   head: ({ params }) => {
@@ -47,31 +50,42 @@ export const Route = createFileRoute("/cidadao/instituicao/$id")({
   component: Ficha,
 });
 
-/** Cor da barra por faixa de nota — verde só a partir do patamar de referência. */
-function corDaNota(nota: number) {
-  if (nota >= 90) return "bg-success";
-  if (nota >= 75) return "bg-brand-teal";
-  if (nota >= 60) return "bg-brand-amber";
-  return "bg-destructive";
-}
-
 const rotuloEvento: Record<RegistroBlockchain["tipo"], string> = {
   certificacao: "Certificação",
   avaliacao: "Avaliação",
   denuncia: "Denúncia",
   renovacao: "Renovação",
   atualizacao: "Atualização",
+  suspensao: "Suspensão",
 };
 
 function Ficha() {
   const { id } = Route.useParams();
+  const selo = useSelo();
   const inst = institutionPorId.get(id);
 
   // O loader já barrou id inexistente; o guarda existe para o TypeScript, que
   // não enxerga essa garantia através do roteador.
   if (!inst) return null;
 
-  const historico = registrosDaInstituicao(inst.id);
+  /* A ficha pública mostra só o que passou pela triagem: antes dela, um relato
+     é alegação que o SIS ainda não avaliou, e publicá-la nominalmente faria a
+     instituição carregar uma acusação não apurada. O bloco existe na cadeia
+     desde o recebimento — o que espera é a vitrine, não o registro. */
+  const historico = selo.registrosPublicos(inst);
+  const situacao = selo.status(inst);
+  const nivel = selo.nivel(inst);
+  const nota = selo.pontuacao(inst);
+  const validade = selo.validade(inst);
+  const criterios = selo.criterios(inst);
+  const subselosDaUnidade = selo.subselos(inst);
+  const cert = selo.certificacao(inst);
+  const modelo = apuracaoDaInstituicao(inst.id)?.modelo;
+  const piso = modelo?.notaMinimaPorEixo ?? 60;
+
+  /** Mesma régua do plano de adequação, agora ciente do piso do modelo. */
+  const corDaNota = (n: number) =>
+    n >= PATAMAR_DE_REFERENCIA ? "bg-success" : n >= piso ? "bg-brand-amber" : "bg-destructive";
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -94,7 +108,8 @@ function Ficha() {
                   <span className="rounded-full border bg-card px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
                     {inst.tipo}
                   </span>
-                  <StatusBadge status={inst.status} />
+                  <StatusBadge status={situacao} />
+                  {situacao === "Certificada" && validade && <ValidadeBadge validade={validade} />}
                 </div>
 
                 <h1 className="mt-4 text-3xl font-bold leading-tight text-primary sm:text-4xl">
@@ -111,12 +126,22 @@ function Ficha() {
                 </p>
               </div>
 
-              {inst.nivel && (
+              {nivel && (
                 <div className="shrink-0 text-center">
-                  <Seal nivel={inst.nivel} className="mx-auto size-44" />
-                  {inst.pontuacao !== null && (
+                  {/* Selo cassado aparece esmaecido e marcado: some do lugar de
+                      recomendação sem sair do histórico. */}
+                  <Seal
+                    nivel={nivel}
+                    className={`mx-auto size-44 ${situacao === "Suspensa" ? "opacity-40 grayscale" : ""}`}
+                  />
+                  {situacao === "Suspensa" && (
+                    <p className="mt-2 text-xs font-semibold uppercase tracking-[0.1em] text-destructive">
+                      Selo suspenso
+                    </p>
+                  )}
+                  {nota !== null && (
                     <p className="mt-3 text-2xl font-bold text-primary">
-                      {inst.pontuacao}
+                      {nota}
                       <span className="text-base font-normal text-muted-foreground">/100</span>
                     </p>
                   )}
@@ -134,10 +159,20 @@ function Ficha() {
             </h2>
             <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {[
-                { icon: CalendarClock, rotulo: "Última avaliação", valor: inst.ultimaAvaliacao },
-                { icon: CalendarClock, rotulo: "Validade do selo", valor: inst.validade ?? "-" },
+                {
+                  icon: CalendarClock,
+                  rotulo: "Última avaliação",
+                  valor: selo.ultimaAvaliacao(inst),
+                },
+                { icon: CalendarClock, rotulo: "Validade do selo", valor: validade ?? "-" },
                 { icon: UserCheck, rotulo: "Avaliador responsável", valor: inst.avaliador ?? "-" },
-                { icon: Award, rotulo: "Registro SIS", valor: inst.id.toUpperCase() },
+                {
+                  icon: Award,
+                  /* Qual régua foi usada importa para auditar a emissão anos
+                     depois, quando o modelo já mudou de versão. */
+                  rotulo: "Modelo e token",
+                  valor: cert ? `${cert.modeloCodigo} v${cert.modeloVersao} · ${cert.token}` : "-",
+                },
               ].map((d) => (
                 <div key={d.rotulo} className="rounded-lg border bg-card p-5">
                   <dt className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground">
@@ -152,18 +187,21 @@ function Ficha() {
           </section>
 
           {/* Notas por eixo. */}
-          {inst.criterios.length > 0 && (
+          {criterios.length > 0 && (
             <section aria-labelledby="eixos" className="mt-12">
               <h2 id="eixos" className="text-2xl font-bold text-primary">
                 Desempenho por eixo
               </h2>
               <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
                 Cada eixo é avaliado presencialmente e recebe nota de 0 a 100. A nota final é a
-                média ponderada que define o nível do selo.
+                média ponderada dos pesos definidos pelo modelo{" "}
+                {modelo ? <strong className="font-semibold">{modelo.nome}</strong> : "aplicado"}, e
+                nenhum eixo pode ficar abaixo de {piso} pontos: média alta não compensa um eixo em
+                ruína.
               </p>
 
               <ul className="mt-7 space-y-5">
-                {inst.criterios.map((c) => (
+                {criterios.map((c) => (
                   <li key={c.nome}>
                     <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                       <p className="font-semibold text-foreground">{c.nome}</p>
@@ -187,7 +225,7 @@ function Ficha() {
           )}
 
           {/* Subselos. */}
-          {inst.subselos.length > 0 && (
+          {subselosDaUnidade.length > 0 && (
             <section
               aria-labelledby="subselos"
               className="mt-12 rounded-lg border bg-secondary/40 p-7"
@@ -196,7 +234,7 @@ function Ficha() {
                 Subselos conquistados
               </h2>
               <ul className="mt-5 flex flex-wrap gap-x-7 gap-y-5">
-                {inst.subselos.map((s) => (
+                {subselosDaUnidade.map((s) => (
                   <li key={s} className="flex w-24 flex-col items-center gap-2 text-center">
                     <SubseloBadge nome={s} size={72} decorativa />
                     <span className="text-xs font-semibold leading-snug text-primary">{s}</span>
@@ -216,7 +254,9 @@ function Ficha() {
                 </h2>
                 <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted-foreground">
                   Cadeia de eventos gravada em blockchain. Nenhum registro pode ser apagado ou
-                  reescrito, inclusive os desfavoráveis à instituição.
+                  reescrito, inclusive os desfavoráveis à instituição. Relatos que ainda não
+                  passaram pela triagem do SIS já estão na cadeia, mas não aparecem aqui: até serem
+                  avaliados, são alegação, não fato apurado.
                 </p>
               </div>
             </div>

@@ -36,17 +36,15 @@ export const Route = createFileRoute("/portal/acessos")({
   component: Acessos,
 });
 
-/** E-mail de acesso da unidade: o cadastrado, quando existe; senão, o sugerido. */
+/**
+ * E-mail de acesso da unidade.
+ *
+ * Devolve `null` quando a unidade não tem conta de demonstração, em vez de
+ * inventar um endereço plausível. O e-mail gerado parecia funcional e não
+ * entrava em lugar nenhum — a tela prometia um login que o protótipo não tinha.
+ */
 function emailDaUnidade(inst: Institution) {
-  const cadastrada = contas.find((c) => c.instituicaoId === inst.id);
-  if (cadastrada) return cadastrada.email;
-  const slug = inst.nome
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "")
-    .slice(0, 24);
-  return `${slug}@demo.selo-infancia-segura.org`;
+  return contas.find((c) => c.instituicaoId === inst.id)?.email ?? null;
 }
 
 function Acessos() {
@@ -130,7 +128,13 @@ function Gestao({ escopo }: { escopo: Escopo }) {
                         <StatusBadge status={u.status} />
                       </TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">
-                        {ativo ? emailDaUnidade(u) : "-"}
+                        {!ativo
+                          ? "-"
+                          : (emailDaUnidade(u) ?? (
+                              <span className="font-sans italic">
+                                login a criar no primeiro acesso
+                              </span>
+                            ))}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-3">
@@ -173,8 +177,10 @@ function Gestao({ escopo }: { escopo: Escopo }) {
 
       <AvisoDemo>
         Nesta demonstração, a alteração vale só durante a visita à página: não há backend para
-        gravar a concessão. Os perfis de teste continuam disponíveis no seletor do cabeçalho, e o
-        acesso da EMEF Serra Verde Central mostra exatamente o que uma unidade concedida vê.
+        gravar a concessão. As unidades que já vêm com acesso concedido têm conta de teste no
+        seletor do cabeçalho — a EMEF Serra Verde Central e o CEI Girassol mostram exatamente o que
+        uma unidade concedida vê. Conceder acesso a uma unidade que ainda não tem conta não cria
+        login neste protótipo, e a coluna acima diz isso em vez de exibir um e-mail que não entra.
       </AvisoDemo>
     </div>
   );

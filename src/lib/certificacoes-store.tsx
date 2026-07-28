@@ -11,10 +11,11 @@ import {
 import {
   hashDemo,
   modelosIniciais,
-  nivelPorFaixa,
+  resultadoDaAvaliacao,
   somarMeses,
   type ModeloCertificacao,
   type Nivel,
+  type ResultadoDaAvaliacao,
 } from "@/lib/mock-data";
 
 /**
@@ -53,6 +54,11 @@ export type Emissao = {
   hash: string;
 };
 
+/** Recusa de emissão, com o motivo que a tela precisa explicar. */
+export type EmissaoRecusada = { ok: false; motivo: ResultadoDaAvaliacao };
+export type EmissaoFeita = { ok: true; emissao: Emissao };
+export type ResultadoDaEmissao = EmissaoFeita | EmissaoRecusada;
+
 type Catalogo = {
   /** `false` enquanto o que estava salvo ainda não foi lido no cliente. */
   pronto: boolean;
@@ -61,9 +67,17 @@ type Catalogo = {
   criarModelo: (dados: NovoModelo) => ModeloCertificacao;
   atualizarModelo: (id: string, dados: NovoModelo) => void;
   mudarStatusModelo: (id: string, status: ModeloCertificacao["status"]) => void;
-  /** Emite um modelo para uma instituição. `null` = nota abaixo do corte. */
-  atribuir: (dados: NovaEmissao) => Emissao | null;
+  /**
+   * Emite um modelo para uma instituição.
+   *
+   * Devolve o motivo em caso de recusa em vez de `null`: "não emitiu" e "não
+   * emitiu porque a acessibilidade ficou abaixo do piso eliminatório" são
+   * informações muito diferentes para quem está do outro lado da tela.
+   */
+  atribuir: (dados: NovaEmissao) => ResultadoDaEmissao;
   emissoesDoModelo: (modeloId: string) => Emissao[];
+  /** Emissão mais recente feita nesta sessão para a instituição. */
+  emissaoDaInstituicao: (instituicaoId: string) => Emissao | null;
   restaurarPadrao: () => void;
 };
 
@@ -182,15 +196,25 @@ export function CatalogoProvider({ children }: { children: ReactNode }) {
 
       atribuir: (dados) => {
         const modelo = modelos.find((m) => m.id === dados.modeloId);
-        if (!modelo) return null;
+        if (!modelo) {
+          return {
+            ok: false,
+            motivo: {
+              nota: 0,
+              nivel: null,
+              eixosReprovados: [],
+              motivoDaReprovacao: "média abaixo do corte",
+            },
+          };
+        }
 
-        const soma = modelo.eixos.reduce((s, e) => s + e.peso, 0) || 1;
-        const pontuacao = Math.round(
-          modelo.eixos.reduce((s, e) => s + (dados.notas[e.nome] ?? 0) * e.peso, 0) / soma,
-        );
-        const nivel = nivelPorFaixa(modelo, pontuacao);
-        if (!nivel) return null;
+        // A apuração é a mesma função que o resto do sistema usa: média
+        // ponderada, piso por eixo e corte, na mesma ordem.
+        const apuracao = resultadoDaAvaliacao(modelo, dados.notas);
+        if (!apuracao.nivel) return { ok: false, motivo: apuracao };
 
+        const pontuacao = apuracao.nota;
+        const nivel = apuracao.nivel;
         const data = hoje();
         const sequencial = String(
           emissoes.filter((e) => e.modeloId === modelo.id).length + 1,
@@ -216,10 +240,14 @@ export function CatalogoProvider({ children }: { children: ReactNode }) {
         };
 
         persistir(modelos, [emissao, ...emissoes]);
-        return emissao;
+        return { ok: true, emissao };
       },
 
       emissoesDoModelo: (modeloId) => emissoes.filter((e) => e.modeloId === modeloId),
+
+      // `emissoes` já vem da mais recente para a mais antiga.
+      emissaoDaInstituicao: (instituicaoId) =>
+        emissoes.find((e) => e.instituicaoId === instituicaoId) ?? null,
 
       restaurarPadrao: () => persistir(modelosIniciais, []),
     };

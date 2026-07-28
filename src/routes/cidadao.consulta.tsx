@@ -6,6 +6,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { StatusBadge } from "@/components/StatusBadge";
 import { SubseloBadge } from "@/components/SubseloBadge";
 import { SealChip } from "@/components/Seal";
+import { ValidadeBadge } from "@/components/PortalUI";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { institutions } from "@/lib/mock-data";
+import { useSelo } from "@/lib/selo-efetivo";
 
 export const Route = createFileRoute("/cidadao/consulta")({
   head: () => ({
@@ -37,6 +39,7 @@ export const Route = createFileRoute("/cidadao/consulta")({
 });
 
 function Consulta() {
+  const selo = useSelo();
   const [q, setQ] = useState("");
   const [cidade, setCidade] = useState("all");
   const [tipo, setTipo] = useState("all");
@@ -53,7 +56,7 @@ function Consulta() {
       i.nome.toLowerCase().includes(q.trim().toLowerCase()) &&
       (cidade === "all" || `${i.cidade} - ${i.uf}` === cidade) &&
       (tipo === "all" || i.tipo === tipo) &&
-      (status === "all" || i.status === status),
+      (status === "all" || selo.status(i) === status),
   );
 
   const temFiltro = q !== "" || cidade !== "all" || tipo !== "all" || status !== "all";
@@ -153,6 +156,7 @@ function Consulta() {
                 <SelectContent>
                   <SelectItem value="all">Todas as situações</SelectItem>
                   <SelectItem value="Certificada">Certificada</SelectItem>
+                  <SelectItem value="Aguardando emissão">Aguardando emissão</SelectItem>
                   <SelectItem value="Em avaliação">Em avaliação</SelectItem>
                   <SelectItem value="Pendente">Pendente</SelectItem>
                   <SelectItem value="Suspensa">Suspensa</SelectItem>
@@ -175,65 +179,79 @@ function Consulta() {
           </div>
 
           <ul className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {filtradas.map((i) => (
-              <li key={i.id}>
-                <Link
-                  to="/cidadao/instituicao/$id"
-                  params={{ id: i.id }}
-                  className="group flex h-full flex-col rounded-lg border bg-card p-6 transition-colors hover:border-primary/50 hover:bg-secondary/30"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="rounded-full border bg-background px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                      {i.tipo}
+            {filtradas.map((i) => {
+              const nivel = selo.nivel(i);
+              const nota = selo.pontuacao(i);
+              const validade = selo.validade(i);
+              const subselosDaUnidade = selo.subselos(i);
+              const situacao = selo.status(i);
+
+              return (
+                <li key={i.id}>
+                  <Link
+                    to="/cidadao/instituicao/$id"
+                    params={{ id: i.id }}
+                    className="group flex h-full flex-col rounded-lg border bg-card p-6 transition-colors hover:border-primary/50 hover:bg-secondary/30"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="rounded-full border bg-background px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                        {i.tipo}
+                      </span>
+                      <StatusBadge status={situacao} />
+                    </div>
+
+                    <h3 className="mt-4 text-lg font-bold leading-snug text-primary">{i.nome}</h3>
+
+                    <p className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <MapPin className="size-3.5 shrink-0" aria-hidden />
+                      {i.cidade} - {i.uf}
+                    </p>
+
+                    <p className="mt-3 flex-1 text-sm leading-relaxed text-muted-foreground">
+                      {i.descricao}
+                    </p>
+
+                    <div className="mt-5 flex flex-wrap items-center gap-2 border-t pt-4">
+                      {nivel ? (
+                        <SealChip nivel={nivel} />
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Sem selo vigente</span>
+                      )}
+                      {nota !== null && (
+                        <span className="text-xs text-muted-foreground">{nota}/100 pontos</span>
+                      )}
+
+                      {/* Subselos em escala reduzida: aqui eles são sinal de
+                          comparação entre instituições, não o assunto do card.
+                          Sem `decorativa`, porque o nome não aparece por escrito. */}
+                      {subselosDaUnidade.length > 0 && (
+                        <span className="ml-auto flex items-center gap-1">
+                          {subselosDaUnidade.map((s) => (
+                            <SubseloBadge key={s} nome={s} size={24} />
+                          ))}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* A validade é o que diz se o selo ainda vale hoje: sem ela,
+                        um Ouro de 2020 pareceria igual a um Ouro deste mês. */}
+                    {situacao === "Certificada" && validade && (
+                      <span className="mt-3">
+                        <ValidadeBadge validade={validade} />
+                      </span>
+                    )}
+
+                    <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-primary">
+                      Ver ficha completa
+                      <ArrowRight
+                        className="size-4 transition-transform group-hover:translate-x-0.5"
+                        aria-hidden
+                      />
                     </span>
-                    <StatusBadge status={i.status} />
-                  </div>
-
-                  <h3 className="mt-4 text-lg font-bold leading-snug text-primary">{i.nome}</h3>
-
-                  <p className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <MapPin className="size-3.5 shrink-0" aria-hidden />
-                    {i.cidade} - {i.uf}
-                  </p>
-
-                  <p className="mt-3 flex-1 text-sm leading-relaxed text-muted-foreground">
-                    {i.descricao}
-                  </p>
-
-                  <div className="mt-5 flex flex-wrap items-center gap-2 border-t pt-4">
-                    {i.nivel ? (
-                      <SealChip nivel={i.nivel} />
-                    ) : (
-                      <span className="text-xs text-muted-foreground">Sem selo vigente</span>
-                    )}
-                    {i.pontuacao !== null && (
-                      <span className="text-xs text-muted-foreground">
-                        {i.pontuacao}/100 pontos
-                      </span>
-                    )}
-
-                    {/* Subselos em escala reduzida: aqui eles são sinal de
-                        comparação entre instituições, não o assunto do card.
-                        Sem `decorativa`, porque o nome não aparece por escrito. */}
-                    {i.subselos.length > 0 && (
-                      <span className="ml-auto flex items-center gap-1">
-                        {i.subselos.map((s) => (
-                          <SubseloBadge key={s} nome={s} size={24} />
-                        ))}
-                      </span>
-                    )}
-                  </div>
-
-                  <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-primary">
-                    Ver ficha completa
-                    <ArrowRight
-                      className="size-4 transition-transform group-hover:translate-x-0.5"
-                      aria-hidden
-                    />
-                  </span>
-                </Link>
-              </li>
-            ))}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
 
           {filtradas.length === 0 && (

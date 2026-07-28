@@ -1,6 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { CheckCircle2, Send, EyeOff, Blocks, Scale, Phone, ShieldAlert, Copy } from "lucide-react";
+import {
+  Check,
+  CheckCircle2,
+  Send,
+  EyeOff,
+  Blocks,
+  Scale,
+  Phone,
+  ShieldAlert,
+  ShieldCheck,
+  Copy,
+} from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { Button } from "@/components/ui/button";
@@ -13,7 +24,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { institutions } from "@/lib/mock-data";
+import {
+  ANO_DE_REFERENCIA,
+  institutions,
+  naturezasDeDenuncia,
+  proximoProtocolo,
+} from "@/lib/mock-data";
 
 export const Route = createFileRoute("/cidadao/denuncia")({
   head: () => ({
@@ -34,22 +50,6 @@ export const Route = createFileRoute("/cidadao/denuncia")({
   component: Denuncia,
 });
 
-/**
- * Categorias alinhadas ao escopo real de proteção infantojuvenil.
- * As anteriores ("fraude em certificação", "irregularidade pedagógica",
- * "irregularidade financeira") tratavam o canal como ouvidoria administrativa —
- * o que este canal apura é risco à criança.
- */
-const categorias = [
-  { valor: "seguranca", label: "Segurança física do ambiente" },
-  { valor: "maus-tratos", label: "Suspeita de maus-tratos ou negligência" },
-  { valor: "profissionais", label: "Conduta ou qualificação de profissionais" },
-  { valor: "acessibilidade", label: "Falta de acessibilidade ou exclusão" },
-  { valor: "higiene", label: "Higiene, alimentação ou salubridade" },
-  { valor: "dados", label: "Uso indevido de dados ou imagem de menores" },
-  { valor: "outra", label: "Outra irregularidade" },
-];
-
 const garantias = [
   {
     icon: EyeOff,
@@ -69,6 +69,12 @@ const garantias = [
     texto:
       "A gravidade é definida na triagem do SIS, não por você: basta relatar o que viu. Denúncias com indício de crime são encaminhadas aos órgãos competentes, e o resultado da apuração também é publicado.",
   },
+  {
+    icon: ShieldCheck,
+    titulo: "Publicação só após triagem",
+    texto:
+      "O relato entra na cadeia no momento em que você envia, mas a ficha pública da instituição só passa a exibi-lo depois da triagem. Isso protege quem denuncia de ver o caso arquivado por vício de forma, e a instituição de carregar publicamente uma acusação ainda não apurada.",
+  },
 ];
 
 function Denuncia() {
@@ -76,15 +82,33 @@ function Denuncia() {
   const [inst, setInst] = useState("");
   const [cat, setCat] = useState("");
   const [desc, setDesc] = useState("");
+  const [copiado, setCopiado] = useState(false);
 
   // Protocolo fictício, só para ilustrar o comprovante do denunciante.
   const [protocolo, setProtocolo] = useState("");
+  /** Quantos comprovantes já saíram nesta visita, para não repetir número. */
+  const [emitidos, setEmitidos] = useState(0);
 
   const enviar = (e: React.FormEvent) => {
     e.preventDefault();
-    const aleatorio = Math.random().toString(16).slice(2, 10).toUpperCase();
-    setProtocolo(`SIS-${new Date().getFullYear()}-${aleatorio}`);
+    /* Mesmo formato da fila do portal (`DEN-aaaa-nnnn`). Um protocolo que só o
+       comprovante entende seria inútil justamente para quem precisa cobrar
+       andamento — e `SIS-aaaa-...` colidiria com o token de certificação. */
+    setProtocolo(proximoProtocolo(ANO_DE_REFERENCIA, emitidos));
+    setEmitidos((n) => n + 1);
+    setCopiado(false);
     setEnviado(true);
+  };
+
+  const copiarProtocolo = async () => {
+    try {
+      await navigator.clipboard.writeText(protocolo);
+      setCopiado(true);
+    } catch {
+      // Navegador sem permissão de área de transferência: o número segue visível
+      // na tela para cópia manual, que é o que importa.
+      setCopiado(false);
+    }
   };
 
   const novaDenuncia = () => {
@@ -92,6 +116,7 @@ function Denuncia() {
     setInst("");
     setCat("");
     setDesc("");
+    setCopiado(false);
   };
 
   return (
@@ -167,10 +192,27 @@ function Denuncia() {
                   <p className="text-xs font-medium uppercase tracking-[0.1em] text-muted-foreground">
                     Protocolo do denunciante
                   </p>
-                  <p className="mt-2 flex items-center justify-center gap-2 font-mono text-lg font-semibold text-primary">
-                    <Copy className="size-4 text-muted-foreground" aria-hidden />
-                    {protocolo}
-                  </p>
+                  <p className="mt-2 font-mono text-lg font-semibold text-primary">{protocolo}</p>
+                  {/* Botão de verdade: o ícone de cópia antes era decorativo e
+                      não copiava nada, o que é cruel com quem precisa guardar
+                      justamente este número. */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-3"
+                    onClick={copiarProtocolo}
+                  >
+                    {copiado ? (
+                      <>
+                        <Check className="size-4" aria-hidden /> Protocolo copiado
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="size-4" aria-hidden /> Copiar protocolo
+                      </>
+                    )}
+                  </Button>
                 </div>
 
                 <Button className="mt-7" variant="outline" onClick={novaDenuncia}>
@@ -207,10 +249,13 @@ function Denuncia() {
                       <SelectTrigger id="categoria">
                         <SelectValue placeholder="Selecione a natureza..." />
                       </SelectTrigger>
+                      {/* Mesma lista fechada que a triagem usa para o piso de
+                          gravidade: se o canal oferecesse outras naturezas, o
+                          piso automático não teria como ser aplicado. */}
                       <SelectContent>
-                        {categorias.map((c) => (
-                          <SelectItem key={c.valor} value={c.valor}>
-                            {c.label}
+                        {naturezasDeDenuncia.map((n) => (
+                          <SelectItem key={n} value={n}>
+                            {n}
                           </SelectItem>
                         ))}
                       </SelectContent>

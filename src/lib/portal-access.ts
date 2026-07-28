@@ -96,7 +96,40 @@ export const contas: Conta[] = [
     instituicaoId: "cre-002",
     demo: "Creche cliente direta, sem rede gestora: responde por si mesma e fala direto com o SIS.",
   },
+  {
+    /* Toda unidade com `acessoProprio` precisa de conta: a tela de acessos
+       mostra o e-mail de login de quem tem a concessão, e um e-mail que não
+       entra em lugar nenhum transforma a demonstração em promessa vazia. */
+    id: "unidade-cre-102",
+    papel: "unidade",
+    email: "ceigirassol@demo.selo-infancia-segura.org",
+    senha: SENHA_DEMO,
+    pessoa: "Marta Figueiredo",
+    cargo: "Coordenação pedagógica",
+    instituicaoId: "cre-102",
+    demo: "Creche da rede municipal com acesso concedido: mesma rede da EMEF Serra Verde Central, mas enxerga só a própria unidade.",
+  },
+  {
+    id: "unidade-esc-008",
+    papel: "unidade",
+    email: "novageracao@demo.selo-infancia-segura.org",
+    senha: SENHA_DEMO,
+    pessoa: "Renato Bittencourt",
+    cargo: "Direção",
+    instituicaoId: "esc-008",
+    demo: "Unidade de rede privada com acesso concedido pelo grupo: vê o próprio selo, não o das unidades irmãs.",
+  },
 ];
+
+/**
+ * Unidades com `acessoProprio` que não têm conta cadastrada.
+ *
+ * Vazio é o estado correto. A tela de acessos usa isto para não prometer um
+ * login que não existe, em vez de gerar um e-mail plausível e deixar quem avalia
+ * descobrir na tentativa de entrar.
+ */
+export const unidadesSemConta = (unidades: { id: string; acessoProprio?: boolean }[]) =>
+  unidades.filter((u) => u.acessoProprio && !contas.some((c) => c.instituicaoId === u.id));
 
 export const contaPorId = new Map(contas.map((c) => [c.id, c]));
 

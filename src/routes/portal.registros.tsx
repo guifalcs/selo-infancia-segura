@@ -1,6 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Blocks, Link2, ShieldCheck, FileClock, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Blocks,
+  Link2,
+  ShieldCheck,
+  FileClock,
+  ChevronLeft,
+  ChevronRight,
+  EyeOff,
+} from "lucide-react";
 
 import { PortalLayout } from "@/components/PortalLayout";
 import { Indicador, Painel, Vazio, AvisoDemo } from "@/components/PortalUI";
@@ -40,6 +48,7 @@ const rotuloTipo: Record<RegistroBlockchain["tipo"], string> = {
   avaliacao: "Avaliação",
   renovacao: "Renovação",
   denuncia: "Denúncia",
+  suspensao: "Suspensão",
   atualizacao: "Atualização",
 };
 
@@ -47,8 +56,9 @@ const corTipo: Record<RegistroBlockchain["tipo"], string> = {
   certificacao: "border-success/30 bg-success/10 text-success",
   avaliacao: "border-brand-teal/30 bg-brand-teal/10 text-brand-teal",
   renovacao: "border-brand-blue/30 bg-brand-blue/10 text-brand-blue",
-  denuncia: "border-destructive/30 bg-destructive/10 text-destructive",
-  atualizacao: "border-brand-amber/40 bg-brand-amber/10 text-brand-amber",
+  denuncia: "border-brand-amber/40 bg-brand-amber/10 text-brand-amber",
+  suspensao: "border-destructive/30 bg-destructive/10 text-destructive",
+  atualizacao: "border-muted-foreground/30 bg-muted text-muted-foreground",
 };
 
 const tipos = [
@@ -57,6 +67,7 @@ const tipos = [
   "avaliacao",
   "renovacao",
   "denuncia",
+  "suspensao",
   "atualizacao",
 ] as const;
 
@@ -206,20 +217,25 @@ function Livro({ escopo }: { escopo: Escopo }) {
         titulo="Livro de eventos"
         descricao="Ordenado do mais recente para o mais antigo. O número do bloco cresce com o tempo, então a ordem não pode ser reescrita."
         acoes={
+          /* Só entram os filtros que têm registro no escopo. Um botão que sempre
+             devolve lista vazia — "Renovação", enquanto nenhuma renovação foi
+             concluída — parece defeito da tela, não ausência de evento. */
           <div className="flex flex-wrap gap-1">
-            {tipos.map((t) => (
-              <Button
-                key={t}
-                size="sm"
-                variant={tipo === t ? "default" : "ghost"}
-                onClick={() => {
-                  setTipo(t);
-                  setPagina(1);
-                }}
-              >
-                {t === "todos" ? "Todos" : rotuloTipo[t]}
-              </Button>
-            ))}
+            {tipos
+              .filter((t) => t === "todos" || doEscopo.some((r) => r.tipo === t))
+              .map((t) => (
+                <Button
+                  key={t}
+                  size="sm"
+                  variant={tipo === t ? "default" : "ghost"}
+                  onClick={() => {
+                    setTipo(t);
+                    setPagina(1);
+                  }}
+                >
+                  {t === "todos" ? "Todos" : rotuloTipo[t]}
+                </Button>
+              ))}
           </div>
         }
       >
@@ -261,6 +277,15 @@ function Livro({ escopo }: { escopo: Escopo }) {
                       )}
                       <TableCell className="min-w-[16rem] text-sm font-medium leading-snug">
                         {r.evento}
+                        {/* O bloco existe e é auditável; o que espera a triagem é
+                            a exibição na ficha pública. Dizer isso aqui evita a
+                            leitura de que o registro foi omitido. */}
+                        {!r.publico && (
+                          <span className="mt-1 flex items-center gap-1 text-[11px] font-normal text-muted-foreground">
+                            <EyeOff className="size-3 shrink-0" aria-hidden />
+                            gravado na cadeia, fora da ficha pública até a triagem
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell className="whitespace-nowrap font-mono text-[11px] text-muted-foreground">
                         <span className="flex items-center gap-1.5">

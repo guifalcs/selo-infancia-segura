@@ -27,7 +27,26 @@ import { SectionHeading } from "@/components/SectionHeading";
 import { SubseloBadge } from "@/components/SubseloBadge";
 import { Seal } from "@/components/Seal";
 import { TramaInstitucional } from "@/components/illustrations";
-import { eixos, niveis, subselos } from "@/lib/mock-data";
+import { PISO_ELIMINATORIO_PADRAO } from "@/components/PortalUI";
+import {
+  cortesDosModelosAtivos,
+  eixos,
+  niveis,
+  registrosPublicosDaInstituicao,
+  subselos,
+} from "@/lib/mock-data";
+
+/**
+ * Trecho de cadeia mostrado na seção de blockchain.
+ *
+ * Sai do mesmo livro que o portal exibe: emissão, denúncia e suspensão de uma
+ * instituição real do protótipo, em ordem cronológica.
+ */
+const cadeiaDeExemplo = [...registrosPublicosDaInstituicao("cur-007")]
+  .reverse()
+  .filter((r) => r.tipo === "certificacao" || r.tipo === "denuncia" || r.tipo === "suspensao")
+  .filter((r, i, arr) => i === 0 || i === 1 || i === arr.length - 1)
+  .slice(0, 3);
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -292,7 +311,8 @@ function Home() {
               <h3 className="text-xl font-bold text-primary">Os seis eixos avaliados</h3>
               <p className="mt-2 text-sm text-muted-foreground">
                 Cada eixo recebe uma nota de 0 a 100, sempre ancorada em norma já existente: a
-                plataforma não inventa exigência nova.
+                plataforma não inventa exigência nova. Nenhum eixo pode ficar abaixo de{" "}
+                {PISO_ELIMINATORIO_PADRAO} pontos — média alta não compensa um eixo em ruína.
               </p>
               <ul className="mt-7 grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
                 {eixos.map((e) => (
@@ -355,6 +375,30 @@ function Home() {
             </ul>
           </div>
 
+          {/* A nota de corte não é a mesma para todo ambiente: dizer "60" na home
+              e 65 no catálogo de modelos faria a página contradizer o produto. */}
+          <div className="mt-10 rounded-lg border border-dashed bg-card p-6">
+            <h3 className="text-sm font-bold text-primary">
+              A nota de corte varia conforme o ambiente
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Cada modelo de selo define a própria nota mínima de aprovação, porque o risco não é o
+              mesmo em toda parte. Abaixo do corte não há emissão: a instituição recebe plano de
+              adequação e nova avaliação.
+            </p>
+            <ul className="mt-4 grid gap-2 sm:grid-cols-3">
+              {cortesDosModelosAtivos().map((m) => (
+                <li key={m.codigo} className="rounded-md border bg-background px-4 py-3">
+                  <p className="font-mono text-xs text-brand-teal">{m.codigo}</p>
+                  <p className="mt-1 text-xs leading-snug text-muted-foreground">{m.nome}</p>
+                  <p className="mt-1.5 text-sm font-semibold text-primary">
+                    corte em {m.corte} pontos
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </div>
+
           <p className="mt-8 flex items-start justify-center gap-2 text-center text-sm text-muted-foreground">
             <CalendarClock className="mt-0.5 size-4 shrink-0" aria-hidden />
             Toda certificação vale 12 meses e só é mantida mediante nova avaliação presencial.
@@ -398,6 +442,13 @@ function Home() {
                   sigla: "CF/88",
                   nome: "Constituição Federal",
                   desc: "Prioridade absoluta dos direitos da criança e do adolescente.",
+                },
+                {
+                  /* A LBI fundamenta o eixo de acessibilidade e faltava aqui: a
+                     seção normativa precisa citar tudo o que os eixos citam. */
+                  sigla: "LBI",
+                  nome: "Lei Brasileira de Inclusão",
+                  desc: "Acessibilidade física e atendimento adequado a crianças com deficiência.",
                 },
                 {
                   sigla: "ANVISA",
@@ -449,26 +500,27 @@ function Home() {
             ))}
           </div>
 
-          {/* Cadeia de registros ilustrativa. */}
+          {/* Cadeia de registros: blocos reais do livro do protótipo, e não uma
+              ilustração à parte. Números e hashes inventados aqui apareceriam em
+              outro formato do que /portal/registros mostra, e quem fosse de uma
+              tela à outra veria duas cadeias diferentes. */}
           <div className="mt-10 rounded-lg border bg-card p-7 sm:p-9">
             <p className="font-mono text-xs uppercase tracking-[0.12em] text-muted-foreground">
-              Exemplo de cadeia de registros
+              Cadeia de uma instituição, como aparece no livro de registros
             </p>
             <ol className="mt-5 space-y-1">
-              {[
-                { n: "#10521", t: "Certificação emitida (nível Ouro)", h: "0x8f2a…c41d" },
-                { n: "#10612", t: "Denúncia registrada de forma anônima", h: "0xbe45…2a09" },
-                { n: "#10688", t: "Denúncia apurada e resultado publicado", h: "0x71c8…40ab" },
-              ].map((b, i, arr) => (
-                <li key={b.n}>
+              {cadeiaDeExemplo.map((b, i, arr) => (
+                <li key={b.bloco}>
                   <div className="flex items-center gap-4 rounded-md border bg-background p-4">
                     <Blocks className="size-5 shrink-0 text-brand-teal" aria-hidden />
                     <div className="min-w-0 flex-1">
-                      <p className="font-mono text-xs text-muted-foreground">Bloco {b.n}</p>
-                      <p className="truncate text-sm font-medium text-foreground">{b.t}</p>
+                      <p className="font-mono text-xs text-muted-foreground">
+                        Bloco {b.bloco} · {b.data}
+                      </p>
+                      <p className="truncate text-sm font-medium text-foreground">{b.evento}</p>
                     </div>
                     <code className="hidden shrink-0 font-mono text-xs text-muted-foreground sm:block">
-                      {b.h}
+                      {b.hash}
                     </code>
                   </div>
                   {i < arr.length - 1 && (
@@ -477,6 +529,10 @@ function Home() {
                 </li>
               ))}
             </ol>
+            <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
+              Estes são os blocos do Instituto Cidadão do Amanhã, cuja certificação foi suspensa
+              após denúncia procedente. O selo saiu; o histórico não.
+            </p>
           </div>
         </section>
 

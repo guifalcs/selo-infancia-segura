@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { avaliacoes, avaliadores } from "@/lib/mock-data";
+import { avaliacoesAssinadas, avaliacoesEmAberto, avaliadores } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/portal/avaliadores")({
   head: () => ({
@@ -32,7 +32,10 @@ export const Route = createFileRoute("/portal/avaliadores")({
 function Avaliadores() {
   const ativos = avaliadores.filter((a) => a.status === "Ativo");
   const emFormacao = avaliadores.filter((a) => a.status === "Em formação");
-  const totalAvaliacoes = avaliadores.reduce((s, a) => s + a.avaliacoes, 0);
+  // Derivado da lista de avaliações, não digitado: um contador escrito à mão
+  // divergiria do histórico na primeira mudança de cenário — antes somava 96
+  // assinaturas para uma base de 15 instituições.
+  const totalAvaliacoes = avaliadores.reduce((s, a) => s + avaliacoesAssinadas(a.nome), 0);
 
   return (
     <PortalLayout
@@ -59,20 +62,20 @@ function Avaliadores() {
             icon={ClipboardCheck}
             label="Avaliações assinadas"
             valor={totalAvaliacoes}
-            detalhe="Somadas em toda a rede"
+            detalhe="Nesta plataforma, desde agosto de 2025"
           />
           <Indicador
             icon={MapPin}
             label="Estados cobertos"
-            valor={new Set(avaliadores.map((a) => a.regiao.split(" · ")[0])).size}
-            detalhe="Cobertura atual do credenciamento"
+            valor={new Set(avaliadores.flatMap((a) => a.ufs)).size}
+            detalhe="UFs com credenciamento regional ativo"
             tom="teal"
           />
         </div>
 
         <Painel
           titulo="Rede de profissionais"
-          descricao="Cada avaliação é assinada por um profissional credenciado; o registro fica vinculado ao nome dele na blockchain."
+          descricao="Cada avaliação é assinada por um profissional credenciado, na UF que o credenciamento dele cobre, e o registro fica vinculado ao nome dele na blockchain. Profissional em formação não assina avaliação: acompanha as visitas até concluir o credenciamento."
         >
           <div className="overflow-x-auto">
             <Table>
@@ -89,18 +92,22 @@ function Avaliadores() {
               </TableHeader>
               <TableBody>
                 {avaliadores.map((a) => {
-                  const abertas = avaliacoes.filter(
-                    (av) =>
-                      av.avaliador === a.nome &&
-                      (av.status === "Agendada" || av.status === "Em andamento"),
-                  ).length;
+                  const abertas = avaliacoesEmAberto(a.nome);
+                  const assinadas = avaliacoesAssinadas(a.nome);
                   return (
                     <TableRow key={a.registro}>
                       <TableCell className="font-medium">{a.nome}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{a.formacao}</TableCell>
                       <TableCell className="font-mono text-sm">{a.registro}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{a.regiao}</TableCell>
-                      <TableCell className="font-mono text-sm">{a.avaliacoes}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {a.regiao}
+                        {a.ufs.length === 0 && (
+                          <span className="block text-[11px]">
+                            acionada por especialidade, sem recorte regional
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">{assinadas}</TableCell>
                       <TableCell>
                         {abertas > 0 ? (
                           <Badge variant="default">{abertas}</Badge>

@@ -9,11 +9,45 @@
  * profissional credenciado, pontuação por critérios objetivos ancorados em
  * normas existentes, nível de certificação (Bronze/Prata/Ouro), subselos
  * temáticos e validade de 12 meses com renovação obrigatória.
+ *
+ * Regra que vale para todo este arquivo: nada é escrito duas vezes. Pontuação,
+ * certificação, avaliação e registro em cadeia são DERIVADOS das notas por eixo
+ * e do modelo aplicado. Se uma tela mostra um número diferente de outra, é bug
+ * de derivação, não divergência de dado.
  */
+
+/**
+ * Data de referência do protótipo.
+ *
+ * Prazos, vencimentos e "o que está atrasado" precisam de um hoje. Usar o
+ * relógio real faria a demonstração envelhecer sozinha: um mês depois de
+ * publicada, metade dos prazos apareceria vencida sem que ninguém tivesse
+ * mexido em nada. Congelar a referência mantém o cenário coerente e deixa
+ * explícito qual é o instante retratado.
+ *
+ * Ao ligar o backend, isto vira `new Date()` e nenhuma tela muda.
+ */
+export const DATA_DE_REFERENCIA = "28/07/2026";
+
+/** Ano da data de referência — compõe protocolos e tokens. */
+export const ANO_DE_REFERENCIA = Number(DATA_DE_REFERENCIA.slice(6));
 
 export type Nivel = "Ouro" | "Prata" | "Bronze";
 
-export type Status = "Certificada" | "Em avaliação" | "Pendente" | "Suspensa";
+/**
+ * Estágio da instituição no ciclo de certificação.
+ *
+ * `Aguardando emissão` existe porque avaliar e emitir são atos distintos: a
+ * visita fecha com uma nota apurada, e a decisão de emitir o selo é da equipe
+ * SIS. Sem esse estado, a instituição avaliada teria de aparecer como
+ * "certificada" antes de existir certificado — que era exatamente o que fazia
+ * a fila de emissão contradizer a tabela de selos.
+ */
+export type Status =
+  "Certificada" | "Aguardando emissão" | "Em avaliação" | "Pendente" | "Suspensa";
+
+/** Estados em que a instituição tem selo vigente e válido para consulta. */
+export const temSeloVigente = (status: Status) => status === "Certificada";
 
 /** O escopo do SIS não é só escola — cobre qualquer ambiente frequentado por
  *  crianças e adolescentes. */
@@ -37,6 +71,16 @@ export const tiposDeInstituicao = [
   "Curso livre",
 ] as const satisfies readonly TipoInstituicao[];
 
+/**
+ * Patamar de referência de um eixo.
+ *
+ * Acima disso o eixo está resolvido; abaixo, entra no plano de adequação. É o
+ * mesmo número que define a cor da barra de nota em toda a interface — duas
+ * réguas diferentes para a mesma pergunta ("este eixo está bem?") fariam a tela
+ * do plano contradizer o gráfico ao lado dela.
+ */
+export const PATAMAR_DE_REFERENCIA = 85;
+
 /** Um critério avaliado, com a norma que o fundamenta. */
 export type Criterio = {
   nome: string;
@@ -51,11 +95,14 @@ export type Institution = {
   cidade: string;
   uf: string;
   status: Status;
-  nivel: Nivel | null;
-  pontuacao: number | null;
   descricao: string;
+  /**
+   * Modelo de selo sob o qual a instituição foi avaliada. É ele que define os
+   * pesos dos eixos, a nota de corte e a validade — e é a sigla dele que compõe
+   * o token da certificação.
+   */
+  modeloId: string;
   ultimaAvaliacao: string;
-  validade: string | null;
   avaliador: string | null;
   subselos: string[];
   criterios: Criterio[];
@@ -133,6 +180,13 @@ export const redes: Rede[] = [
   },
 ];
 
+/**
+ * Base de instituições.
+ *
+ * Note que não há campo de nível, pontuação nem validade: os três são derivados
+ * das notas por eixo e do modelo aplicado, logo abaixo. Guardar a nota final ao
+ * lado das notas que a produzem é convite a divergência.
+ */
 export const institutions: Institution[] = [
   {
     id: "esc-001",
@@ -141,13 +195,11 @@ export const institutions: Institution[] = [
     cidade: "São Paulo",
     uf: "SP",
     status: "Certificada",
-    nivel: "Ouro",
-    pontuacao: 94,
     descricao:
       "Escola pública de ensino fundamental com programa de educação integral e política própria de proteção à criança.",
+    modeloId: "mod-eb",
     ultimaAvaliacao: "12/03/2026",
-    validade: "12/03/2027",
-    avaliador: "Márcia Torres · Pedagoga (CRP em convênio)",
+    avaliador: "Márcia Torres · Pedagoga",
     subselos: ["Acessibilidade", "Prevenção ao Bullying"],
     criterios: criterios([96, 92, 95, 97, 90, 94]),
   },
@@ -158,28 +210,27 @@ export const institutions: Institution[] = [
     cidade: "Rio de Janeiro",
     uf: "RJ",
     status: "Certificada",
-    nivel: "Prata",
-    pontuacao: 81,
     descricao:
       "Creche conveniada que atende crianças de 0 a 3 anos em região de alta vulnerabilidade social.",
+    modeloId: "mod-eb",
     ultimaAvaliacao: "05/02/2026",
-    validade: "05/02/2027",
     avaliador: "Larissa Souza · Psicóloga",
     subselos: ["Prevenção ao Bullying"],
     criterios: criterios([84, 78, 74, 86, 80, 84]),
   },
   {
+    /* Avaliação fechada, selo ainda não emitido: é o caso que a fila de emissão
+       do administrador existe para resolver. Enquanto a decisão não sai, a
+       instituição não aparece como certificada em nenhuma tela. */
     id: "cli-003",
     nome: "Clínica Infantil Horizonte",
     tipo: "Clínica",
     cidade: "Belo Horizonte",
     uf: "MG",
-    status: "Em avaliação",
-    nivel: "Prata",
-    pontuacao: 79,
+    status: "Aguardando emissão",
     descricao: "Clínica pediátrica e de terapias multidisciplinares para crianças e adolescentes.",
+    modeloId: "mod-st",
     ultimaAvaliacao: "22/06/2026",
-    validade: "22/06/2027",
     avaliador: "Diego Almeida · Psicólogo",
     subselos: ["Acessibilidade"],
     criterios: criterios([82, 80, 88, 76, 70, 78]),
@@ -191,31 +242,30 @@ export const institutions: Institution[] = [
     cidade: "Curitiba",
     uf: "PR",
     status: "Certificada",
-    nivel: "Ouro",
-    pontuacao: 91,
     descricao:
       "Projeto social de contraturno escolar com oficinas de esporte, cultura e inclusão digital.",
+    modeloId: "mod-el",
     ultimaAvaliacao: "18/01/2026",
-    validade: "18/01/2027",
     avaliador: "Camila Nunes · Assistente social",
     subselos: ["Inclusão TEA", "Prevenção ao Bullying", "Segurança Digital"],
     criterios: criterios([93, 88, 92, 90, 89, 94]),
   },
   {
+    /* Acessibilidade exatamente no piso eliminatório do modelo: o caso que
+       mostra que o piso por eixo existe e não é decorativo. Um ponto abaixo e
+       não haveria emissão, ainda que a média continuasse acima do corte. */
     id: "clb-005",
     nome: "Clube Atlético Vale do Sol",
     tipo: "Clube esportivo",
     cidade: "Fortaleza",
     uf: "CE",
     status: "Certificada",
-    nivel: "Bronze",
-    pontuacao: 68,
     descricao: "Clube com escolinhas de futebol, natação e ginástica para crianças e adolescentes.",
+    modeloId: "mod-el",
     ultimaAvaliacao: "10/04/2026",
-    validade: "10/04/2027",
     avaliador: "Rafael Prado · Educador físico",
     subselos: [],
-    criterios: criterios([72, 70, 58, 74, 62, 72]),
+    criterios: criterios([72, 70, 60, 74, 62, 72]),
   },
   {
     id: "prq-006",
@@ -224,32 +274,32 @@ export const institutions: Institution[] = [
     cidade: "Salvador",
     uf: "BA",
     status: "Pendente",
-    nivel: null,
-    pontuacao: null,
     descricao:
       "Parque de diversões com brinquedos para faixas etárias distintas. Avaliação inicial agendada.",
+    modeloId: "mod-el",
     ultimaAvaliacao: "-",
-    validade: null,
     avaliador: null,
     subselos: [],
     criterios: [],
   },
   {
-    id: "esc-007",
+    /* Suspensão só faz sentido sobre algo que existiu: as notas e a data abaixo
+       são da certificação Bronze de 2025, que a cadeia mostra sendo emitida e
+       depois suspensa. Sem a emissão no histórico, a ficha pública falaria de
+       um selo cassado que nunca apareceu. */
+    id: "cur-007",
     nome: "Instituto Cidadão do Amanhã",
     tipo: "Curso livre",
     cidade: "Porto Alegre",
     uf: "RS",
     status: "Suspensa",
-    nivel: null,
-    pontuacao: null,
     descricao:
-      "Certificação suspensa após apuração de denúncia relativa a canais de escuta e supervisão de profissionais.",
-    ultimaAvaliacao: "09/09/2025",
-    validade: null,
+      "Curso livre de reforço escolar e informática. Certificação Bronze suspensa em setembro de 2025, após apuração de denúncia sobre canais de escuta e notificação obrigatória.",
+    modeloId: "mod-eb",
+    ultimaAvaliacao: "14/03/2025",
     avaliador: "João Bezerra · Psicólogo",
     subselos: [],
-    criterios: [],
+    criterios: criterios([70, 64, 60, 72, 60, 66]),
   },
   {
     id: "esc-008",
@@ -258,13 +308,11 @@ export const institutions: Institution[] = [
     cidade: "Recife",
     uf: "PE",
     status: "Certificada",
-    nivel: "Prata",
-    pontuacao: 84,
     descricao:
       "Colégio de ensino fundamental e médio com programa de mentoria e letramento digital.",
+    modeloId: "mod-eb",
     ultimaAvaliacao: "27/05/2026",
-    validade: "27/05/2027",
-    avaliador: "Márcia Torres · Pedagoga",
+    avaliador: "Tiago Menezes · Pedagogo",
     subselos: ["Segurança Digital"],
     criterios: criterios([86, 85, 78, 88, 84, 83]),
     redeId: "rede-ng",
@@ -280,16 +328,14 @@ export const institutions: Institution[] = [
     cidade: "Serra Verde",
     uf: "SP",
     status: "Certificada",
-    nivel: "Ouro",
-    pontuacao: 92,
     descricao:
       "Maior escola da rede municipal, com ensino fundamental completo, biblioteca aberta à comunidade e núcleo de escuta permanente.",
+    modeloId: "mod-eb",
     ultimaAvaliacao: "24/02/2026",
-    validade: "24/02/2027",
-    avaliador: "Márcia Torres · Pedagoga (CRP em convênio)",
+    avaliador: "Márcia Torres · Pedagoga",
     subselos: ["Acessibilidade", "Prevenção ao Bullying"],
-    // Nível Ouro com dois eixos abaixo do patamar de 85: é o caso que mostra
-    // que mesmo uma instituição bem avaliada mantém plano de adequação ativo.
+    // Nível Ouro com dois eixos abaixo do patamar de referência: é o caso que
+    // mostra que mesmo uma instituição bem avaliada mantém plano de adequação.
     criterios: criterios([96, 84, 95, 97, 82, 98]),
     redeId: "rede-sv",
     acessoProprio: true,
@@ -301,12 +347,15 @@ export const institutions: Institution[] = [
     cidade: "Serra Verde",
     uf: "SP",
     status: "Certificada",
-    nivel: "Prata",
-    pontuacao: 83,
     descricao:
       "Centro de educação infantil em tempo integral para crianças de 1 a 4 anos, com equipe de referência por turma.",
-    ultimaAvaliacao: "16/03/2026",
-    validade: "16/03/2027",
+    modeloId: "mod-eb",
+    /* Primeira unidade certificada da rede municipal, na adesão de setembro de
+       2025 — e por isso a que vence primeiro. É o caso que mostra a renovação
+       chegando: sem uma certificação perto do vencimento, a fila de renovações
+       da rede e do SIS ficaria sempre vazia e a validade de 12 meses seria
+       apenas uma data decorativa na tela. */
+    ultimaAvaliacao: "12/09/2025",
     avaliador: "Larissa Souza · Psicóloga",
     subselos: ["Inclusão TEA"],
     criterios: criterios([86, 82, 88, 84, 76, 82]),
@@ -314,19 +363,20 @@ export const institutions: Institution[] = [
     acessoProprio: true,
   },
   {
+    /* Certificada Bronze e, ao mesmo tempo, com avaliação extraordinária aberta
+       pela denúncia procedente do portão. Selo vigente sob plano de adequação é
+       o desenho do produto: reprovar não é a única resposta possível. */
     id: "esc-103",
     nome: "EMEF Vila Esperança",
     tipo: "Escola",
     cidade: "Serra Verde",
     uf: "SP",
-    status: "Em avaliação",
-    nivel: "Bronze",
-    pontuacao: 71,
+    status: "Certificada",
     descricao:
       "Escola de ensino fundamental em bairro periférico, em processo de adequação predial acompanhado pela secretaria.",
+    modeloId: "mod-eb",
     ultimaAvaliacao: "02/07/2026",
-    validade: "02/07/2027",
-    avaliador: "Rafael Prado · Educador físico",
+    avaliador: "Márcia Torres · Pedagoga",
     subselos: [],
     criterios: criterios([74, 62, 66, 78, 72, 74]),
     redeId: "rede-sv",
@@ -339,32 +389,29 @@ export const institutions: Institution[] = [
     cidade: "Serra Verde",
     uf: "SP",
     status: "Certificada",
-    nivel: "Prata",
-    pontuacao: 78,
     descricao:
       "Escola de ensino fundamental II com programa de contraturno esportivo e conselho escolar ativo.",
+    modeloId: "mod-eb",
     ultimaAvaliacao: "11/05/2026",
-    validade: "11/05/2027",
-    avaliador: "Camila Nunes · Assistente social",
+    avaliador: "Márcia Torres · Pedagoga",
     subselos: ["Prevenção ao Bullying"],
     criterios: criterios([80, 76, 72, 82, 74, 84]),
     redeId: "rede-sv",
     acessoProprio: false,
   },
   {
+    /* Visita em curso, sem nota fechada: é o que "Em avaliação" quer dizer. */
     id: "prj-105",
     nome: "Centro de Contraturno Semear",
     tipo: "Projeto social",
     cidade: "Serra Verde",
     uf: "SP",
-    status: "Pendente",
-    nivel: null,
-    pontuacao: null,
+    status: "Em avaliação",
     descricao:
-      "Equipamento municipal de contraturno inaugurado em 2026. Primeira avaliação agendada para agosto.",
+      "Equipamento municipal de contraturno inaugurado em 2026. Primeira avaliação em curso, com visita presencial realizada em julho.",
+    modeloId: "mod-el",
     ultimaAvaliacao: "-",
-    validade: null,
-    avaliador: null,
+    avaliador: "Márcia Torres · Pedagoga",
     subselos: [],
     criterios: [],
     redeId: "rede-sv",
@@ -379,13 +426,11 @@ export const institutions: Institution[] = [
     cidade: "Recife",
     uf: "PE",
     status: "Certificada",
-    nivel: "Prata",
-    pontuacao: 86,
     descricao:
       "Segunda unidade do grupo, com ensino fundamental e médio e laboratório de tecnologia educacional.",
+    modeloId: "mod-eb",
     ultimaAvaliacao: "03/06/2026",
-    validade: "03/06/2027",
-    avaliador: "Diego Almeida · Psicólogo",
+    avaliador: "Tiago Menezes · Pedagogo",
     subselos: ["Segurança Digital"],
     criterios: criterios([88, 86, 82, 88, 86, 84]),
     redeId: "rede-ng",
@@ -398,13 +443,11 @@ export const institutions: Institution[] = [
     cidade: "Olinda",
     uf: "PE",
     status: "Certificada",
-    nivel: "Bronze",
-    pontuacao: 73,
     descricao:
       "Berçário e educação infantil do grupo, com plano de adequação em acessibilidade em andamento.",
+    modeloId: "mod-eb",
     ultimaAvaliacao: "19/04/2026",
-    validade: "19/04/2027",
-    avaliador: "Larissa Souza · Psicóloga",
+    avaliador: "Tiago Menezes · Pedagogo",
     subselos: [],
     criterios: criterios([78, 74, 60, 76, 70, 78]),
     redeId: "rede-ng",
@@ -420,28 +463,6 @@ export const instituicoesIndependentes = () => institutions.filter((i) => !i.red
 
 export const institutionPorId = new Map(institutions.map((i) => [i.id, i]));
 export const redePorId = new Map(redes.map((r) => [r.id, r]));
-
-/** Descrição pública de cada nível — usada na home e na ficha da instituição. */
-export const niveis: { nivel: Nivel; faixa: string; resumo: string }[] = [
-  {
-    nivel: "Bronze",
-    faixa: "60 a 74 pontos",
-    resumo:
-      "Requisitos essenciais de segurança atendidos. A instituição tem plano de adequação ativo para os eixos com menor nota.",
-  },
-  {
-    nivel: "Prata",
-    faixa: "75 a 89 pontos",
-    resumo:
-      "Boas práticas consolidadas em todos os eixos, com procedimentos documentados e equipe capacitada.",
-  },
-  {
-    nivel: "Ouro",
-    faixa: "90 a 100 pontos",
-    resumo:
-      "Referência em proteção integral, com política própria, escuta ativa e acompanhamento contínuo.",
-  },
-];
 
 export type Subselo = {
   nome: string;
@@ -484,18 +505,71 @@ export const subselos: Subselo[] = [
 export const subseloPorNome = new Map(subselos.map((s) => [s.nome, s]));
 
 /* ---------------------------------------------------------------------------
- * Dados operacionais do portal institucional.
- *
- * Tudo aqui é derivado ou vinculado por `instituicaoId`, nunca por nome: as
- * telas do portal filtram por escopo (uma unidade, uma rede, ou a base
- * inteira), e casar registros por string de nome quebraria no primeiro
- * homônimo — "Colégio Nova Geração" e sua segunda unidade, por exemplo.
+ * Utilidades de data.
  * ------------------------------------------------------------------------ */
 
-/** Data brasileira (dd/mm/aaaa) em número ordenável. `—` vira 0. */
+/** Data brasileira (dd/mm/aaaa) em número ordenável. `-` vira 0. */
 export const ordemPorData = (data: string) => {
   const [d, m, a] = data.split("/");
   return a ? Number(a) * 10000 + Number(m) * 100 + Number(d) : 0;
+};
+
+/**
+ * Data brasileira somada de N meses — usada para calcular a validade.
+ *
+ * O dia é limitado ao último dia do mês de destino: sem isso, um selo emitido
+ * em 31/01 venceria em 03/03, porque a data transborda para o mês seguinte. A
+ * validade de um selo não pode pular de mês por acidente de calendário.
+ */
+export const somarMeses = (data: string, meses: number) => {
+  const [d, m, a] = data.split("/").map(Number);
+  if (!a) return data;
+  const ultimoDia = new Date(a, m + meses, 0).getDate();
+  const dt = new Date(a, m - 1 + meses, Math.min(d, ultimoDia));
+  return `${String(dt.getDate()).padStart(2, "0")}/${String(dt.getMonth() + 1).padStart(2, "0")}/${dt.getFullYear()}`;
+};
+
+const paraDate = (data: string) => {
+  const [d, m, a] = data.split("/").map(Number);
+  return a ? new Date(a, m - 1, d) : null;
+};
+
+/** Dias entre duas datas brasileiras. Negativo = a segunda já passou. */
+export const diasEntre = (de: string, ate: string) => {
+  const a = paraDate(de);
+  const b = paraDate(ate);
+  if (!a || !b) return null;
+  return Math.round((b.getTime() - a.getTime()) / 86_400_000);
+};
+
+/** Dias até a data, contados da data de referência do protótipo. */
+export const diasAPartirDeHoje = (data: string) => diasEntre(DATA_DE_REFERENCIA, data);
+
+/** Uma data já passou em relação à referência do protótipo? */
+export const jaPassou = (data: string) => {
+  const d = diasAPartirDeHoje(data);
+  return d !== null && d < 0;
+};
+
+/** Janela em que uma certificação entra em "renovação a preparar". */
+export const DIAS_DE_ALERTA_DE_VALIDADE = 90;
+
+export type SituacaoDaValidade = "Vigente" | "A vencer" | "Vencida";
+
+/**
+ * Situação temporal de uma validade.
+ *
+ * Um selo de 12 meses só significa algo se a plataforma souber dizer quando ele
+ * está acabando. Sem isto, "validade 12/03/2027" é texto decorativo.
+ */
+export const situacaoDaValidade = (
+  validade: string,
+): { situacao: SituacaoDaValidade; dias: number } | null => {
+  const dias = diasAPartirDeHoje(validade);
+  if (dias === null) return null;
+  if (dias < 0) return { situacao: "Vencida", dias };
+  if (dias <= DIAS_DE_ALERTA_DE_VALIDADE) return { situacao: "A vencer", dias };
+  return { situacao: "Vigente", dias };
 };
 
 /**
@@ -515,42 +589,6 @@ export const hashDemo = (semente: string) => {
   const cauda = Math.imul(h ^ 0x9e3779b9, 0x85ebca6b) >>> 0;
   return `0x${hex}…${cauda.toString(16).padStart(8, "0").slice(-4)}`;
 };
-
-export type StatusCertificacao = "Ativa" | "Em renovação" | "Suspensa";
-
-export type Certificacao = {
-  instituicaoId: string;
-  nivel: Nivel;
-  pontuacao: number;
-  emissao: string;
-  validade: string;
-  status: StatusCertificacao;
-  /** Token emitido na rede — é ele que a família consulta no portal público. */
-  token: string;
-  hash: string;
-};
-
-/**
- * Certificações vigentes, derivadas das instituições que já têm nível e
- * validade. Derivar em vez de repetir garante que o selo mostrado no portal
- * institucional é o mesmo da ficha pública.
- */
-export const certificacoes: Certificacao[] = institutions
-  .filter((i) => i.nivel !== null && i.pontuacao !== null && i.validade !== null)
-  .map((i, idx) => ({
-    instituicaoId: i.id,
-    nivel: i.nivel!,
-    pontuacao: i.pontuacao!,
-    emissao: i.ultimaAvaliacao,
-    validade: i.validade!,
-    status:
-      i.status === "Suspensa" ? "Suspensa" : i.status === "Em avaliação" ? "Em renovação" : "Ativa",
-    token: `SIS-2026-${String(idx + 1).padStart(4, "0")}`,
-    hash: hashDemo(`cert:${i.id}`),
-  }));
-
-export const certificacaoDaInstituicao = (instituicaoId: string) =>
-  certificacoes.find((c) => c.instituicaoId === instituicaoId) ?? null;
 
 /* ---------------------------------------------------------------------------
  * Modelos de certificação.
@@ -584,8 +622,18 @@ export type ModeloCertificacao = {
   /** Tipos de instituição que podem ser avaliados por este modelo. */
   tiposElegiveis: TipoInstituicao[];
   eixos: EixoDoModelo[];
-  /** Corte de aprovação: abaixo disso não há emissão, só plano de adequação. */
+  /** Corte de aprovação na média: abaixo disso não há emissão, só plano. */
   notaMinima: number;
+  /**
+   * Piso eliminatório por eixo.
+   *
+   * Média alta não compensa um eixo em ruína: uma escola com acessibilidade
+   * zerada e todo o resto impecável ainda é uma escola que exclui criança com
+   * deficiência. Sem este piso, o selo premiaria a média e ignoraria o risco
+   * concentrado — que é justamente o que uma certificação de proteção infantil
+   * não pode fazer.
+   */
+  notaMinimaPorEixo: number;
   faixas: FaixaDeNivel[];
   validadeMeses: number;
   /** Evidências que o avaliador precisa anexar para fechar a avaliação. */
@@ -599,14 +647,21 @@ export type ModeloCertificacao = {
   versao: number;
 };
 
-/** Pesos iguais para os seis eixos padrão — ponto de partida de um modelo novo. */
-export const eixosComPesoIgual = (): EixoDoModelo[] =>
-  eixos.map((e, i) => ({
+/**
+ * Pesos iguais para os seis eixos padrão — ponto de partida de um modelo novo.
+ *
+ * 100 não divide por 6. O resto vai para o último eixo, e não para o primeiro,
+ * para que a lista comece com o valor "redondo" que a pessoa espera ver.
+ */
+export const eixosComPesoIgual = (): EixoDoModelo[] => {
+  const base = Math.floor(100 / eixos.length); // 16
+  const resto = 100 - base * eixos.length; // 4
+  return eixos.map((e, i) => ({
     nome: e.nome,
     base: e.base,
-    // 100 não divide por 6: o resto vai para o primeiro eixo, para a soma fechar.
-    peso: i === 0 ? 100 - 17 * (eixos.length - 1) : 17,
+    peso: i === eixos.length - 1 ? base + resto : base,
   }));
+};
 
 /** Faixas padrão, alinhadas à descrição pública dos níveis. */
 export const faixasPadrao = (): FaixaDeNivel[] => [
@@ -631,20 +686,48 @@ export const notaPonderada = (modelo: ModeloCertificacao, notas: Record<string, 
   return Math.round(total / soma);
 };
 
-/**
- * Data brasileira somada de N meses — usada para calcular a validade.
- *
- * O dia é limitado ao último dia do mês de destino: sem isso, um selo emitido
- * em 31/01 venceria em 03/03, porque a data transborda para o mês seguinte. A
- * validade de um selo não pode pular de mês por acidente de calendário.
- */
-export const somarMeses = (data: string, meses: number) => {
-  const [d, m, a] = data.split("/").map(Number);
-  if (!a) return data;
-  const ultimoDia = new Date(a, m + meses, 0).getDate();
-  const dt = new Date(a, m - 1 + meses, Math.min(d, ultimoDia));
-  return `${String(dt.getDate()).padStart(2, "0")}/${String(dt.getMonth() + 1).padStart(2, "0")}/${dt.getFullYear()}`;
+export type ResultadoDaAvaliacao = {
+  nota: number;
+  /** `null` quando não há emissão: média abaixo do corte ou eixo abaixo do piso. */
+  nivel: Nivel | null;
+  /** Eixos que ficaram abaixo do piso eliminatório do modelo. */
+  eixosReprovados: string[];
+  /** Por que não houve emissão. `null` quando houve. */
+  motivoDaReprovacao: "média abaixo do corte" | "eixo abaixo do piso eliminatório" | null;
 };
+
+/**
+ * Apuração completa de uma avaliação contra um modelo.
+ *
+ * Única porta para transformar notas em selo: a média, o piso por eixo e o
+ * corte entram na mesma conta, então nenhuma tela consegue conceder um nível
+ * que outra tela recusaria.
+ */
+export function resultadoDaAvaliacao(
+  modelo: ModeloCertificacao,
+  notas: Record<string, number>,
+): ResultadoDaAvaliacao {
+  const nota = notaPonderada(modelo, notas);
+  const eixosReprovados = modelo.eixos
+    .filter((e) => (notas[e.nome] ?? 0) < modelo.notaMinimaPorEixo)
+    .map((e) => e.nome);
+
+  if (eixosReprovados.length) {
+    return {
+      nota,
+      nivel: null,
+      eixosReprovados,
+      motivoDaReprovacao: "eixo abaixo do piso eliminatório",
+    };
+  }
+  const nivel = nivelPorFaixa(modelo, nota);
+  return {
+    nota,
+    nivel,
+    eixosReprovados,
+    motivoDaReprovacao: nivel ? null : "média abaixo do corte",
+  };
+}
 
 /**
  * Modelos publicados pela equipe SIS.
@@ -652,6 +735,9 @@ export const somarMeses = (data: string, meses: number) => {
  * Três modelos cobrem os tipos de ambiente atendidos hoje. Os pesos mudam entre
  * eles de propósito: numa creche o ambiente físico pesa mais que o canal de
  * escuta, enquanto num curso livre online a proteção de dados é o eixo crítico.
+ *
+ * A faixa Bronze de cada modelo começa exatamente na nota de corte dele: uma
+ * faixa que comece abaixo do corte descreveria um nível que nunca é concedido.
  */
 export const modelosIniciais: ModeloCertificacao[] = [
   {
@@ -670,7 +756,12 @@ export const modelosIniciais: ModeloCertificacao[] = [
       { nome: "Canais de escuta e denúncia", base: "ECA · Conselho Tutelar", peso: 15 },
     ],
     notaMinima: 60,
-    faixas: faixasPadrao(),
+    notaMinimaPorEixo: 60,
+    faixas: [
+      { nivel: "Ouro", minimo: 90 },
+      { nivel: "Prata", minimo: 75 },
+      { nivel: "Bronze", minimo: 60 },
+    ],
     validadeMeses: 12,
     requisitos: [
       "Auto de Vistoria do Corpo de Bombeiros vigente",
@@ -706,7 +797,12 @@ export const modelosIniciais: ModeloCertificacao[] = [
       { nome: "Canais de escuta e denúncia", base: "ECA · Conselho Tutelar", peso: 10 },
     ],
     notaMinima: 65,
-    faixas: faixasPadrao(),
+    notaMinimaPorEixo: 60,
+    faixas: [
+      { nivel: "Ouro", minimo: 90 },
+      { nivel: "Prata", minimo: 75 },
+      { nivel: "Bronze", minimo: 65 },
+    ],
     validadeMeses: 12,
     requisitos: [
       "Registro ativo do serviço no conselho de classe correspondente",
@@ -736,7 +832,12 @@ export const modelosIniciais: ModeloCertificacao[] = [
       { nome: "Canais de escuta e denúncia", base: "ECA · Conselho Tutelar", peso: 10 },
     ],
     notaMinima: 60,
-    faixas: faixasPadrao(),
+    notaMinimaPorEixo: 60,
+    faixas: [
+      { nivel: "Ouro", minimo: 90 },
+      { nivel: "Prata", minimo: 75 },
+      { nivel: "Bronze", minimo: 60 },
+    ],
     validadeMeses: 12,
     requisitos: [
       "Laudo estrutural dos equipamentos de recreação, quando houver",
@@ -751,7 +852,7 @@ export const modelosIniciais: ModeloCertificacao[] = [
     versao: 1,
   },
   {
-    id: "mod-ead",
+    id: "mod-ad",
     nome: "Selo Infância Segura · Ambientes Digitais",
     codigo: "SIS-AD",
     descricao:
@@ -766,7 +867,12 @@ export const modelosIniciais: ModeloCertificacao[] = [
       { nome: "Canais de escuta e denúncia", base: "ECA · Conselho Tutelar", peso: 15 },
     ],
     notaMinima: 70,
-    faixas: faixasPadrao(),
+    notaMinimaPorEixo: 60,
+    faixas: [
+      { nivel: "Ouro", minimo: 90 },
+      { nivel: "Prata", minimo: 80 },
+      { nivel: "Bronze", minimo: 70 },
+    ],
     validadeMeses: 12,
     requisitos: [
       "Termo de consentimento parental específico por funcionalidade",
@@ -781,9 +887,325 @@ export const modelosIniciais: ModeloCertificacao[] = [
   },
 ];
 
+export const modeloPorId = new Map(modelosIniciais.map((m) => [m.id, m]));
+
 /** Modelo aplicável a um tipo de instituição — só entre os publicados. */
 export const modelosParaTipo = (lista: ModeloCertificacao[], tipo: TipoInstituicao) =>
   lista.filter((m) => m.status === "Ativo" && m.tiposElegiveis.includes(tipo));
+
+/* ---------------------------------------------------------------------------
+ * Apuração das instituições da base.
+ *
+ * Nota, nível e validade saem daqui — uma vez, do modelo mais as notas por
+ * eixo. Toda tela lê deste mapa em vez de guardar a própria cópia.
+ * ------------------------------------------------------------------------ */
+
+export type Apuracao = {
+  modelo: ModeloCertificacao;
+  /** `null` quando não há avaliação fechada (Pendente, Em avaliação). */
+  nota: number | null;
+  /** `null` quando não há selo (nem emitido, nem já emitido e suspenso). */
+  nivel: Nivel | null;
+  /** `null` quando não há certificação emitida. */
+  validade: string | null;
+  eixosReprovados: string[];
+};
+
+const apuracoes = new Map<string, Apuracao>(
+  institutions.map((i) => {
+    const modelo = modeloPorId.get(i.modeloId) ?? modelosIniciais[0];
+
+    if (i.criterios.length === 0) {
+      return [i.id, { modelo, nota: null, nivel: null, validade: null, eixosReprovados: [] }];
+    }
+
+    const notas = Object.fromEntries(i.criterios.map((c) => [c.nome, c.nota]));
+    const { nota, nivel, eixosReprovados } = resultadoDaAvaliacao(modelo, notas);
+
+    // "Aguardando emissão" tem nota apurada mas ainda não tem selo: o nível é
+    // uma sugestão da régua, não um fato — por isso não vaza como `nivel`.
+    const emitiu = i.status === "Certificada" || i.status === "Suspensa";
+
+    return [
+      i.id,
+      {
+        modelo,
+        nota,
+        nivel: emitiu ? nivel : null,
+        validade: emitiu ? somarMeses(i.ultimaAvaliacao, modelo.validadeMeses) : null,
+        eixosReprovados,
+      },
+    ];
+  }),
+);
+
+export const apuracaoDaInstituicao = (id: string): Apuracao | null => apuracoes.get(id) ?? null;
+
+/** Nota final apurada. `null` sem avaliação fechada. */
+export const pontuacaoDaInstituicao = (id: string) => apuracoes.get(id)?.nota ?? null;
+
+/** Nível do selo emitido. `null` quando não há emissão. */
+export const nivelDaInstituicao = (id: string) => apuracoes.get(id)?.nivel ?? null;
+
+/** Validade do selo emitido. `null` quando não há emissão. */
+export const validadeDaInstituicao = (id: string) => apuracoes.get(id)?.validade ?? null;
+
+/**
+ * Nível que a régua do modelo sugere para uma nota já apurada.
+ *
+ * É o que a fila de emissão mostra: a decisão ainda é da equipe SIS, então a
+ * tela sugere sem afirmar que o selo existe.
+ */
+export const nivelSugerido = (id: string): Nivel | null => {
+  const a = apuracoes.get(id);
+  if (!a || a.nota === null || a.eixosReprovados.length) return null;
+  return nivelPorFaixa(a.modelo, a.nota);
+};
+
+/**
+ * Descrição pública de cada nível.
+ *
+ * A faixa inferior do Bronze não é fixa: cada modelo define a própria nota de
+ * corte (60 na educação básica, 65 em saúde, 70 no rascunho digital). Dizer
+ * "60 a 74" para todos faria a home contradizer o catálogo de modelos.
+ */
+export const niveis: { nivel: Nivel; faixa: string; resumo: string }[] = [
+  {
+    nivel: "Bronze",
+    faixa: "da nota de corte até 74 pontos",
+    resumo:
+      "Requisitos essenciais de segurança atendidos, com nenhum eixo abaixo do piso eliminatório. A instituição tem plano de adequação ativo para os eixos com menor nota.",
+  },
+  {
+    nivel: "Prata",
+    faixa: "75 a 89 pontos",
+    resumo:
+      "Boas práticas consolidadas em todos os eixos, com procedimentos documentados e equipe capacitada.",
+  },
+  {
+    nivel: "Ouro",
+    faixa: "90 a 100 pontos",
+    resumo:
+      "Referência em proteção integral, com política própria, escuta ativa e acompanhamento contínuo.",
+  },
+];
+
+/** Faixa de corte de cada modelo ativo — usada na home para não fixar o 60. */
+export const cortesDosModelosAtivos = () =>
+  modelosIniciais
+    .filter((m) => m.status === "Ativo")
+    .map((m) => ({ nome: m.nome, codigo: m.codigo, corte: m.notaMinima }));
+
+/* ---------------------------------------------------------------------------
+ * Dados operacionais do portal institucional.
+ *
+ * Tudo aqui é derivado ou vinculado por `instituicaoId`, nunca por nome: as
+ * telas do portal filtram por escopo (uma unidade, uma rede, ou a base
+ * inteira), e casar registros por string de nome quebraria no primeiro
+ * homônimo — "Colégio Nova Geração" e sua segunda unidade, por exemplo.
+ * ------------------------------------------------------------------------ */
+
+export type StatusCertificacao = "Ativa" | "A vencer" | "Vencida" | "Suspensa";
+
+export type Certificacao = {
+  instituicaoId: string;
+  nivel: Nivel;
+  pontuacao: number;
+  emissao: string;
+  validade: string;
+  status: StatusCertificacao;
+  /** Dias até o vencimento, contados da data de referência. Negativo = vencida. */
+  diasParaVencer: number;
+  modeloId: string;
+  modeloCodigo: string;
+  modeloVersao: number;
+  /** Token emitido na rede — é ele que a família consulta no portal público. */
+  token: string;
+  hash: string;
+};
+
+/**
+ * Certificações emitidas, derivadas das instituições que têm selo.
+ *
+ * Inclui as suspensas: um selo cassado continua tendo existido, e é isso que a
+ * cadeia precisa contar. O que muda é o `status`, nunca a existência do
+ * registro.
+ *
+ * O token carrega a sigla do modelo (`SIS-EB-2026-0001`) porque é o modelo que
+ * diz sob qual régua aquele selo foi concedido. Um token sem essa informação
+ * não permitiria auditar a emissão anos depois, quando a régua já mudou.
+ */
+export const certificacoes: Certificacao[] = (() => {
+  const comSelo = institutions
+    .filter((i) => i.status === "Certificada" || i.status === "Suspensa")
+    .sort((a, b) => ordemPorData(a.ultimaAvaliacao) - ordemPorData(b.ultimaAvaliacao));
+
+  const sequencial = new Map<string, number>();
+
+  return comSelo.map((i) => {
+    const a = apuracoes.get(i.id)!;
+    const validade = a.validade!;
+    const chaveSeq = `${a.modelo.codigo}-${i.ultimaAvaliacao.slice(6)}`;
+    const n = (sequencial.get(chaveSeq) ?? 0) + 1;
+    sequencial.set(chaveSeq, n);
+
+    const temporal = situacaoDaValidade(validade)!;
+    const status: StatusCertificacao =
+      i.status === "Suspensa"
+        ? "Suspensa"
+        : temporal.situacao === "Vencida"
+          ? "Vencida"
+          : temporal.situacao === "A vencer"
+            ? "A vencer"
+            : "Ativa";
+
+    return {
+      instituicaoId: i.id,
+      nivel: a.nivel!,
+      pontuacao: a.nota!,
+      emissao: i.ultimaAvaliacao,
+      validade,
+      status,
+      diasParaVencer: temporal.dias,
+      modeloId: a.modelo.id,
+      modeloCodigo: a.modelo.codigo,
+      modeloVersao: a.modelo.versao,
+      token: `${chaveSeq}-${String(n).padStart(4, "0")}`,
+      hash: hashDemo(`cert:${i.id}`),
+    };
+  });
+})();
+
+export const certificacaoDaInstituicao = (instituicaoId: string) =>
+  certificacoes.find((c) => c.instituicaoId === instituicaoId) ?? null;
+
+/* ---------------------------------------------------------------------------
+ * Avaliadores credenciados.
+ * ------------------------------------------------------------------------ */
+
+export type Avaliador = {
+  nome: string;
+  formacao: string;
+  registro: string;
+  /** UFs que o credenciamento cobre. Vazio = perícia nacional sob demanda. */
+  ufs: string[];
+  regiao: string;
+  status: "Ativo" | "Em formação" | "Inativo";
+};
+
+/**
+ * Rede de profissionais credenciados — visão exclusiva da equipe SIS.
+ *
+ * Duas regras que a base tem de respeitar, porque a interface as afirma:
+ *
+ *   1. quem assina uma avaliação está `Ativo` (ou estava, no caso de registro
+ *      histórico de alguém hoje inativo). Profissional `Em formação` não assina;
+ *   2. a visita cai na UF que o credenciamento do profissional cobre. A exceção
+ *      é a perícia de acessibilidade, que é acionada por especialidade e não por
+ *      região — e por isso tem `ufs` vazio, explicitamente.
+ *
+ * O contador de avaliações não é digitado: sai de `avaliacoes`. Número escrito
+ * à mão aqui divergiria da lista na primeira alteração de cenário.
+ */
+export const avaliadores: Avaliador[] = [
+  {
+    nome: "Márcia Torres",
+    formacao: "Pedagoga",
+    registro: "SIS-AV-0031",
+    ufs: ["SP"],
+    regiao: "SP · Capital e interior",
+    status: "Ativo",
+  },
+  {
+    nome: "Larissa Souza",
+    formacao: "Psicóloga",
+    registro: "SIS-AV-0044",
+    ufs: ["RJ", "SP"],
+    regiao: "RJ e SP · Região metropolitana",
+    status: "Ativo",
+  },
+  {
+    nome: "Diego Almeida",
+    formacao: "Psicólogo",
+    registro: "SIS-AV-0052",
+    ufs: ["MG"],
+    regiao: "MG · Belo Horizonte",
+    status: "Ativo",
+  },
+  {
+    nome: "Camila Nunes",
+    formacao: "Assistente social",
+    registro: "SIS-AV-0058",
+    ufs: ["PR", "SC"],
+    regiao: "PR e SC · Sul",
+    status: "Ativo",
+  },
+  {
+    nome: "Rafael Prado",
+    formacao: "Educador físico",
+    registro: "SIS-AV-0063",
+    ufs: ["CE"],
+    regiao: "CE · Fortaleza",
+    status: "Ativo",
+  },
+  {
+    nome: "Tiago Menezes",
+    formacao: "Pedagogo",
+    registro: "SIS-AV-0067",
+    ufs: ["PE"],
+    regiao: "PE · Região metropolitana",
+    status: "Ativo",
+  },
+  {
+    nome: "Beatriz Coelho",
+    formacao: "Psicóloga",
+    registro: "SIS-AV-0069",
+    ufs: ["BA"],
+    regiao: "BA · Salvador",
+    status: "Ativo",
+  },
+  {
+    /* Perícia de acessibilidade: acionada pela especialidade, em qualquer UF.
+       É o único credenciamento sem recorte regional, e é assim de propósito —
+       medição conforme a NBR 9050 exige formação que a rede regional não tem. */
+    nome: "Priscila Marques",
+    formacao: "Arquiteta · acessibilidade",
+    registro: "SIS-AV-0071",
+    ufs: [],
+    regiao: "Nacional · perícia de acessibilidade",
+    status: "Ativo",
+  },
+  {
+    nome: "João Bezerra",
+    formacao: "Psicólogo",
+    registro: "SIS-AV-0027",
+    ufs: ["RS"],
+    regiao: "RS · Porto Alegre",
+    status: "Inativo",
+  },
+  {
+    nome: "Nataniel Vieira",
+    formacao: "Assistente social",
+    registro: "SIS-AV-0078",
+    ufs: ["GO"],
+    regiao: "GO · Goiânia",
+    status: "Em formação",
+  },
+];
+
+export const avaliadorPorNome = new Map(avaliadores.map((a) => [a.nome, a]));
+
+/** Rótulo completo de um avaliador, como aparece assinando uma avaliação. */
+export const rotuloDoAvaliador = (nome: string) => {
+  const a = avaliadorPorNome.get(nome);
+  return a ? `${a.nome} · ${a.formacao}` : nome;
+};
+
+/** Identificação com registro, usada na apuração de denúncia. */
+export const responsavelDaApuracao = (nome: string) => {
+  const a = avaliadorPorNome.get(nome);
+  return a ? `${a.nome} · ${a.registro}` : nome;
+};
 
 export type StatusAvaliacao = "Aprovada" | "Em andamento" | "Agendada" | "Reprovada";
 
@@ -795,63 +1217,115 @@ export type Avaliacao = {
   tipo: "Inicial" | "Renovação" | "Extraordinária";
   status: StatusAvaliacao;
   pontuacao: number | null;
+  /** Por que esta visita existe. Aparece no histórico da unidade. */
+  motivo?: string;
 };
 
-/** Avaliações já realizadas — uma por instituição com histórico. */
-const avaliacoesRealizadas: Avaliacao[] = institutions
-  .filter((i) => i.avaliador !== null && i.ultimaAvaliacao !== "-")
+/**
+ * Avaliação que fechou com nota — a que sustenta o selo (ou a suspensão) atual.
+ *
+ * Derivada da instituição: a nota é a mesma da apuração, então a tela de
+ * avaliações não pode mostrar um número diferente da tela de certificações.
+ */
+const avaliacoesFechadas: Avaliacao[] = institutions
+  .filter((i) => i.criterios.length > 0 && i.ultimaAvaliacao !== "-")
   .map((i) => ({
-    id: `av-${i.id}`,
+    id: `av-${i.id}-1`,
     instituicaoId: i.id,
     avaliador: i.avaliador!.split(" · ")[0],
     data: i.ultimaAvaliacao,
     tipo: "Inicial" as const,
-    status:
-      i.status === "Suspensa"
-        ? ("Reprovada" as const)
-        : i.status === "Em avaliação"
-          ? ("Em andamento" as const)
-          : ("Aprovada" as const),
-    pontuacao: i.status === "Em avaliação" ? null : i.pontuacao,
+    status: "Aprovada" as const,
+    pontuacao: apuracoes.get(i.id)!.nota,
   }));
 
-/** Agenda futura e reavaliações extraordinárias abertas por denúncia. */
-const avaliacoesAgendadas: Avaliacao[] = [
+/**
+ * Visitas em curso, agendadas e extraordinárias.
+ *
+ * Toda extraordinária aqui tem uma denúncia procedente atrás dela, e toda
+ * renovação está marcada antes do vencimento do selo que renova — as duas
+ * coisas que a tela de avaliações afirma sobre a agenda.
+ */
+const avaliacoesAbertas: Avaliacao[] = [
+  /* Primeira avaliação em curso: visita feita, nota não fechada. */
+  {
+    id: "av-prj-105-1",
+    instituicaoId: "prj-105",
+    avaliador: "Márcia Torres",
+    data: "20/07/2026",
+    tipo: "Inicial",
+    status: "Em andamento",
+    pontuacao: null,
+    motivo: "Primeira avaliação da unidade, inaugurada em 2026.",
+  },
+  /* Nunca avaliado: visita marcada. */
   {
     id: "av-prq-006-1",
     instituicaoId: "prq-006",
-    avaliador: "Rafael Prado",
+    avaliador: "Beatriz Coelho",
     data: "12/08/2026",
     tipo: "Inicial",
     status: "Agendada",
     pontuacao: null,
+    motivo: "Primeira avaliação após adesão do parque.",
   },
-  {
-    id: "av-prj-105-1",
-    instituicaoId: "prj-105",
-    avaliador: "Camila Nunes",
-    data: "26/08/2026",
-    tipo: "Inicial",
-    status: "Agendada",
-    pontuacao: null,
-  },
+  /* Extraordinária aberta pela DEN-2026-0203 (turma de natação sem segundo
+     profissional na borda). Educador físico, na UF do clube. */
   {
     id: "av-clb-005-2",
     instituicaoId: "clb-005",
-    avaliador: "Camila Nunes",
-    data: "04/07/2026",
+    avaliador: "Rafael Prado",
+    data: "15/07/2026",
     tipo: "Extraordinária",
     status: "Em andamento",
     pontuacao: null,
+    motivo: "Aberta pela denúncia DEN-2026-0203, sobre supervisão em atividade aquática.",
   },
+  /* Extraordinária aberta pela DEN-2026-0187 (portão sem trava), procedente:
+     reavaliação do eixo de segurança predial, como consta nas providências. */
   {
-    id: "av-esc-001-2",
-    instituicaoId: "esc-001",
+    id: "av-esc-103-2",
+    instituicaoId: "esc-103",
     avaliador: "Márcia Torres",
-    data: "09/03/2027",
+    data: "22/07/2026",
+    tipo: "Extraordinária",
+    status: "Em andamento",
+    pontuacao: null,
+    motivo: "Reavaliação do eixo de segurança predial determinada na DEN-2026-0187.",
+  },
+  /* Extraordinária de perícia de acessibilidade, aberta pela DEN-2026-0244:
+     medição da rampa conforme a NBR 9050. É visita técnica de especialidade, e
+     por isso não segue o recorte regional dos credenciados. */
+  {
+    id: "av-esc-104-2",
+    instituicaoId: "esc-104",
+    avaliador: "Priscila Marques",
+    data: "14/07/2026",
+    tipo: "Extraordinária",
+    status: "Em andamento",
+    pontuacao: null,
+    motivo: "Medição de acessibilidade determinada na DEN-2026-0244, conforme a NBR 9050.",
+  },
+  /* Renovações: marcadas antes do vencimento de cada selo. */
+  {
+    id: "av-cre-102-2",
+    instituicaoId: "cre-102",
+    avaliador: "Larissa Souza",
+    data: "20/08/2026",
     tipo: "Renovação",
     status: "Agendada",
     pontuacao: null,
+    motivo: "Selo vence em 12/09/2026: é a primeira renovação da rede municipal.",
+  },
+  {
+    id: "av-cre-002-2",
+    instituicaoId: "cre-002",
+    avaliador: "Larissa Souza",
+    data: "02/02/2027",
+    tipo: "Renovação",
+    status: "Agendada",
+    pontuacao: null,
+    motivo: "Selo vence em 05/02/2027.",
   },
   {
     id: "av-esc-101-2",
@@ -861,15 +1335,60 @@ const avaliacoesAgendadas: Avaliacao[] = [
     tipo: "Renovação",
     status: "Agendada",
     pontuacao: null,
+    motivo: "Selo vence em 24/02/2027.",
+  },
+  {
+    id: "av-esc-001-2",
+    instituicaoId: "esc-001",
+    avaliador: "Márcia Torres",
+    data: "09/03/2027",
+    tipo: "Renovação",
+    status: "Agendada",
+    pontuacao: null,
+    motivo: "Selo vence em 12/03/2027.",
   },
 ];
 
-export const avaliacoes: Avaliacao[] = [...avaliacoesRealizadas, ...avaliacoesAgendadas].sort(
-  (a, b) => ordemPorData(b.data) - ordemPorData(a.data),
-);
+/**
+ * Extraordinária que levou à suspensão do Instituto Cidadão do Amanhã.
+ *
+ * Fica separada porque é a única avaliação reprovada da base, e é ela que
+ * justifica a suspensão que a cadeia pública mostra. Sem este registro, a ficha
+ * falaria de um selo cassado sem dizer por qual visita.
+ */
+const avaliacaoDaSuspensao: Avaliacao = {
+  id: "av-cur-007-2",
+  instituicaoId: "cur-007",
+  avaliador: "João Bezerra",
+  data: "16/09/2025",
+  tipo: "Extraordinária",
+  status: "Reprovada",
+  pontuacao: null,
+  motivo: "Aberta pela denúncia DEN-2025-0918, sobre omissão de notificação obrigatória.",
+};
+
+export const avaliacoes: Avaliacao[] = [
+  ...avaliacoesFechadas,
+  avaliacaoDaSuspensao,
+  ...avaliacoesAbertas,
+].sort((a, b) => ordemPorData(b.data) - ordemPorData(a.data));
 
 export const avaliacoesDaInstituicao = (instituicaoId: string) =>
   avaliacoes.filter((a) => a.instituicaoId === instituicaoId);
+
+/** Avaliações que o profissional já assinou na plataforma. */
+export const avaliacoesAssinadas = (nome: string) =>
+  avaliacoes.filter((a) => a.avaliador === nome && a.status !== "Agendada").length;
+
+/** Visitas ainda abertas na mão do profissional. */
+export const avaliacoesEmAberto = (nome: string) =>
+  avaliacoes.filter(
+    (a) => a.avaliador === nome && (a.status === "Agendada" || a.status === "Em andamento"),
+  ).length;
+
+/* ---------------------------------------------------------------------------
+ * Denúncias.
+ * ------------------------------------------------------------------------ */
 
 export type StatusDenuncia = "Recebida" | "Em apuração" | "Procedente" | "Improcedente";
 
@@ -890,6 +1409,17 @@ export type NaturezaDenuncia =
   | "Higiene, alimentação ou salubridade"
   | "Uso indevido de dados ou imagem de menores"
   | "Outra irregularidade";
+
+/** Naturezas na ordem em que o canal público as apresenta. */
+export const naturezasDeDenuncia = [
+  "Segurança física do ambiente",
+  "Suspeita de maus-tratos ou negligência",
+  "Conduta ou qualificação de profissionais",
+  "Falta de acessibilidade ou exclusão",
+  "Higiene, alimentação ou salubridade",
+  "Uso indevido de dados ou imagem de menores",
+  "Outra irregularidade",
+] as const satisfies readonly NaturezaDenuncia[];
 
 /**
  * Piso de gravidade por natureza do relato.
@@ -960,12 +1490,19 @@ export type Denuncia = {
   impactoNoSelo: string;
 };
 
+const CANAL = "Canal público SIS";
+const COORD = "Coordenação de certificação SIS";
+
 /**
  * Denúncias registradas pelo canal público.
  *
  * O portal mostra o teor, o andamento e o efeito sobre o selo. A autoria fica
  * fora da base: não é um campo escondido na interface, é dado que o canal não
  * guarda.
+ *
+ * Duas invariantes de cenário, verificadas contra `DATA_DE_REFERENCIA`:
+ * nenhum caso em aberto tem prazo vencido sem etapa de prorrogação, e nenhuma
+ * visita marcada para o passado ficou sem a etapa que a registra.
  */
 export const denuncias: Denuncia[] = [
   {
@@ -981,35 +1518,35 @@ export const denuncias: Denuncia[] = [
       "Relato de demora no retorno sobre ocorrência entre alunos. Apurado com registro de protocolo interno cumprido no prazo.",
     relato:
       "Uma ocorrência entre alunos do 6º ano teria sido comunicada à coordenação e ficado três semanas sem retorno às famílias envolvidas. O relato aponta que a escola só teria se manifestado depois de nova cobrança.",
-    responsavel: "Larissa Souza · SIS-AV-0044",
+    responsavel: responsavelDaApuracao("Larissa Souza"),
     prazo: "17/06/2026",
     andamento: [
       {
         data: "18/05/2026",
         titulo: "Relato recebido pelo canal público",
         detalhe: "Protocolo gerado e gravado na cadeia da instituição.",
-        responsavel: "Canal público SIS",
+        responsavel: CANAL,
       },
       {
         data: "20/05/2026",
         titulo: "Triagem concluída · gravidade média",
         detalhe:
           "Classificado no eixo Canais de escuta e denúncia, com prazo de apuração de 30 dias.",
-        responsavel: "Coordenação de certificação SIS",
+        responsavel: COORD,
       },
       {
         data: "28/05/2026",
         titulo: "Documentação solicitada à instituição",
         detalhe:
           "Livro de ocorrências e comprovantes de comunicação às famílias no período foram requisitados.",
-        responsavel: "Larissa Souza · SIS-AV-0044",
+        responsavel: responsavelDaApuracao("Larissa Souza"),
       },
       {
         data: "05/06/2026",
         titulo: "Apuração concluída · improcedente",
         detalhe:
           "Registros mostram atendimento em 48 horas e duas comunicações às famílias, ambas datadas.",
-        responsavel: "Coordenação de certificação SIS",
+        responsavel: COORD,
       },
     ],
     providencias: [
@@ -1033,34 +1570,41 @@ export const denuncias: Denuncia[] = [
       "Portão de acesso sem trava funcional no contraturno. Adequação incluída no plano da secretaria com prazo de 60 dias.",
     relato:
       "O portão principal permaneceria destravado durante as atividades do contraturno, com entrada e saída sem controle de quem circula pelo pátio. O relato menciona que a trava está quebrada há meses.",
-    responsavel: "Márcia Torres · SIS-AV-0031",
+    responsavel: responsavelDaApuracao("Márcia Torres"),
     prazo: "02/07/2026",
     andamento: [
       {
         data: "02/06/2026",
         titulo: "Relato recebido pelo canal público",
         detalhe: "Protocolo gerado e gravado na cadeia da instituição.",
-        responsavel: "Canal público SIS",
+        responsavel: CANAL,
       },
       {
         data: "03/06/2026",
         titulo: "Triagem concluída · gravidade alta",
         detalhe: "Risco de acesso não controlado a área com crianças. Apuração priorizada.",
-        responsavel: "Coordenação de certificação SIS",
+        responsavel: COORD,
       },
       {
         data: "10/06/2026",
         titulo: "Vistoria presencial realizada",
         detalhe:
           "Trava eletrônica inoperante confirmada; controle de entrada feito apenas por funcionário no horário parcial.",
-        responsavel: "Márcia Torres · SIS-AV-0031",
+        responsavel: responsavelDaApuracao("Márcia Torres"),
       },
       {
         data: "18/06/2026",
         titulo: "Apuração concluída · procedente",
         detalhe:
           "Adequação determinada e incluída no plano da secretaria, com reavaliação do eixo na próxima visita.",
-        responsavel: "Coordenação de certificação SIS",
+        responsavel: COORD,
+      },
+      {
+        data: "22/07/2026",
+        titulo: "Avaliação extraordinária aberta",
+        detalhe:
+          "Reavaliação do eixo Segurança predial e prevenção iniciada, conforme providência determinada.",
+        responsavel: responsavelDaApuracao("Márcia Torres"),
       },
     ],
     providencias: [
@@ -1082,35 +1626,51 @@ export const denuncias: Denuncia[] = [
     status: "Em apuração",
     gravidade: "Alta",
     resumo:
-      "Relato de turma de natação sem segundo profissional na borda. Avaliação extraordinária aberta.",
+      "Relato de turma de natação sem segundo profissional na borda. Avaliação extraordinária realizada; laudo em análise.",
     relato:
       "Turmas de natação da faixa de 6 a 9 anos estariam sendo conduzidas por um único professor, sem segundo profissional na borda, contrariando a escala apresentada na avaliação inicial.",
-    responsavel: "Rafael Prado · SIS-AV-0063",
-    prazo: "21/07/2026",
+    responsavel: responsavelDaApuracao("Rafael Prado"),
+    /* Prorrogado com etapa registrada: prazo em aberto nunca vence em silêncio. */
+    prazo: "20/08/2026",
     andamento: [
       {
         data: "21/06/2026",
         titulo: "Relato recebido pelo canal público",
         detalhe: "Protocolo gerado e gravado na cadeia da instituição.",
-        responsavel: "Canal público SIS",
+        responsavel: CANAL,
       },
       {
         data: "22/06/2026",
         titulo: "Triagem concluída · gravidade alta",
         detalhe: "Risco de afogamento em atividade aquática. Apuração priorizada.",
-        responsavel: "Coordenação de certificação SIS",
+        responsavel: COORD,
       },
       {
         data: "30/06/2026",
         titulo: "Avaliação extraordinária aberta",
         detalhe:
           "Visita presencial agendada para 15/07/2026, sem aviso do horário exato à unidade.",
-        responsavel: "Rafael Prado · SIS-AV-0063",
+        responsavel: responsavelDaApuracao("Rafael Prado"),
+      },
+      {
+        data: "15/07/2026",
+        titulo: "Avaliação extraordinária realizada",
+        detalhe:
+          "Duas das quatro turmas observadas estavam com um único profissional na borda. Escala e folhas de ponto do período recolhidas.",
+        responsavel: responsavelDaApuracao("Rafael Prado"),
+      },
+      {
+        data: "20/07/2026",
+        titulo: "Prazo de apuração prorrogado por 30 dias",
+        detalhe:
+          "Prorrogação registrada na cadeia: a análise depende do cruzamento entre escala apresentada e folhas de ponto dos três últimos meses.",
+        responsavel: COORD,
       },
     ],
     providencias: [
       "Escala de profissionais das turmas de natação requisitada ao clube.",
-      "Avaliação extraordinária aberta, com visita presencial em 15/07/2026.",
+      "Avaliação extraordinária realizada em 15/07/2026.",
+      "Segundo profissional na borda exigido em todas as turmas até a conclusão da apuração.",
     ],
     desfecho: null,
     impactoNoSelo: "Selo em análise: a avaliação extraordinária pode alterar a nota do eixo.",
@@ -1122,41 +1682,57 @@ export const denuncias: Denuncia[] = [
     eixo: "Ambiente seguro e saudável",
     categoria: "Alimentação",
     natureza: "Higiene, alimentação ou salubridade",
-    status: "Em apuração",
+    status: "Procedente",
     gravidade: "Média",
     resumo:
-      "Questionamento sobre armazenamento de alimentos na cozinha. Vistoria conjunta com a vigilância sanitária agendada.",
+      "Falha na cadeia de frio confirmada em vistoria conjunta com a vigilância sanitária. Adequação com prazo de 30 dias.",
     relato:
       "Alimentos perecíveis estariam sendo mantidos fora da câmara fria por longos períodos durante o preparo do almoço, com a porta do equipamento aberta boa parte da manhã.",
-    responsavel: "Camila Nunes · SIS-AV-0058",
+    responsavel: responsavelDaApuracao("Larissa Souza"),
     prazo: "26/07/2026",
     andamento: [
       {
         data: "26/06/2026",
         titulo: "Relato recebido pelo canal público",
         detalhe: "Protocolo gerado e gravado na cadeia da instituição.",
-        responsavel: "Canal público SIS",
+        responsavel: CANAL,
       },
       {
         data: "27/06/2026",
         titulo: "Triagem concluída · gravidade média",
         detalhe: "Classificado no eixo Ambiente seguro e saudável, com prazo de 30 dias.",
-        responsavel: "Coordenação de certificação SIS",
+        responsavel: COORD,
       },
       {
         data: "08/07/2026",
         titulo: "Vistoria conjunta agendada",
         detalhe:
           "Inspeção com a vigilância sanitária municipal marcada para 18/07/2026, com foco na cadeia de frio.",
-        responsavel: "Camila Nunes · SIS-AV-0058",
+        responsavel: responsavelDaApuracao("Larissa Souza"),
+      },
+      {
+        data: "18/07/2026",
+        titulo: "Vistoria conjunta realizada",
+        detalhe:
+          "Registro de temperatura incompleto em 9 dos 30 dias analisados e vedação da porta da câmara fria danificada.",
+        responsavel: responsavelDaApuracao("Larissa Souza"),
+      },
+      {
+        data: "24/07/2026",
+        titulo: "Apuração concluída · procedente",
+        detalhe:
+          "Falha confirmada. Adequação determinada com prazo de 30 dias e acompanhamento na próxima visita.",
+        responsavel: COORD,
       },
     ],
     providencias: [
-      "Registros de temperatura da câmara fria solicitados à creche.",
-      "Vistoria conjunta com a vigilância sanitária em 18/07/2026.",
+      "Troca da vedação da câmara fria, com prazo de 30 dias.",
+      "Planilha diária de temperatura com conferência assinada por responsável de turno.",
+      "Reavaliação do eixo Ambiente seguro e saudável na renovação de fevereiro de 2027.",
     ],
-    desfecho: null,
-    impactoNoSelo: "Nenhuma alteração no selo até a conclusão da vistoria.",
+    desfecho:
+      "Procedente. A falha na cadeia de frio foi confirmada em vistoria conjunta e gerou adequação com prazo, sem suspensão do selo.",
+    impactoNoSelo: "Selo mantido sob plano de adequação com prazo de 30 dias.",
   },
   {
     protocolo: "DEN-2026-0230",
@@ -1165,32 +1741,49 @@ export const denuncias: Denuncia[] = [
     eixo: "Proteção de dados de menores",
     categoria: "Uso de imagem",
     natureza: "Uso indevido de dados ou imagem de menores",
-    status: "Recebida",
-    gravidade: null,
+    status: "Em apuração",
+    gravidade: "Média",
     resumo:
-      "Relato de publicação de fotos de turma em rede social sem autorização específica dos responsáveis.",
+      "Relato de publicação de fotos de turma em rede social sem autorização específica dos responsáveis. Termos de autorização em conferência.",
     relato:
       "Fotos de uma turma do 3º ano teriam sido publicadas no perfil da escola com rostos identificáveis, sem que os responsáveis tenham assinado autorização específica para uso de imagem.",
-    responsavel: "Coordenação de certificação SIS",
+    responsavel: responsavelDaApuracao("Márcia Torres"),
     prazo: "31/07/2026",
     andamento: [
       {
         data: "01/07/2026",
         titulo: "Relato recebido pelo canal público",
         detalhe: "Protocolo gerado e gravado na cadeia da instituição.",
-        responsavel: "Canal público SIS",
+        responsavel: CANAL,
       },
       {
-        data: "02/07/2026",
-        titulo: "Encaminhado para triagem",
+        data: "03/07/2026",
+        titulo: "Triagem concluída · gravidade média",
         detalhe:
-          "Na fila de classificação de gravidade; avaliador responsável ainda em designação.",
-        responsavel: "Coordenação de certificação SIS",
+          "Piso automático da natureza informada confirmado: não há menção a exposição de dado sensível além da imagem.",
+        responsavel: COORD,
+      },
+      {
+        data: "13/07/2026",
+        titulo: "Termos de autorização requisitados",
+        detalhe:
+          "Autorizações de uso de imagem da turma e política de redes sociais da unidade solicitadas à direção.",
+        responsavel: responsavelDaApuracao("Márcia Torres"),
+      },
+      {
+        data: "24/07/2026",
+        titulo: "Conferência documental em andamento",
+        detalhe:
+          "22 dos 27 termos da turma foram apresentados. A unidade tem até 29/07/2026 para completar ou remover as publicações.",
+        responsavel: responsavelDaApuracao("Márcia Torres"),
       },
     ],
-    providencias: [],
+    providencias: [
+      "Apresentação dos termos de autorização de uso de imagem de toda a turma.",
+      "Remoção das publicações cujos termos não forem localizados.",
+    ],
     desfecho: null,
-    impactoNoSelo: "Nenhuma medida até a conclusão da triagem.",
+    impactoNoSelo: "Nenhuma alteração no selo até a conclusão da apuração.",
   },
   {
     protocolo: "DEN-2026-0244",
@@ -1202,30 +1795,30 @@ export const denuncias: Denuncia[] = [
     status: "Em apuração",
     gravidade: "Média",
     resumo:
-      "Rampa de acesso ao pátio com inclinação acima do previsto na norma. Medição técnica solicitada.",
+      "Rampa de acesso ao pátio com inclinação acima do previsto na norma. Medição técnica solicitada à perícia de acessibilidade.",
     relato:
       "A rampa que liga o bloco de salas ao pátio teria inclinação acentuada demais para uso autônomo por cadeirante, obrigando alunos a serem carregados por funcionários.",
-    responsavel: "Priscila Marques · SIS-AV-0071",
+    responsavel: responsavelDaApuracao("Priscila Marques"),
     prazo: "05/08/2026",
     andamento: [
       {
         data: "06/07/2026",
         titulo: "Relato recebido pelo canal público",
         detalhe: "Protocolo gerado e gravado na cadeia da instituição.",
-        responsavel: "Canal público SIS",
+        responsavel: CANAL,
       },
       {
         data: "07/07/2026",
         titulo: "Triagem concluída · gravidade média",
         detalhe: "Classificado no eixo Acessibilidade e inclusão, com prazo de 30 dias.",
-        responsavel: "Coordenação de certificação SIS",
+        responsavel: COORD,
       },
       {
         data: "14/07/2026",
         titulo: "Medição técnica solicitada",
         detalhe:
-          "Verificação da inclinação conforme a NBR 9050 por profissional de acessibilidade credenciado.",
-        responsavel: "Priscila Marques · SIS-AV-0071",
+          "Verificação da inclinação conforme a NBR 9050 encaminhada à perícia de acessibilidade, acionada por especialidade e não por região.",
+        responsavel: responsavelDaApuracao("Priscila Marques"),
       },
     ],
     providencias: [
@@ -1237,7 +1830,7 @@ export const denuncias: Denuncia[] = [
   },
   {
     protocolo: "DEN-2025-0918",
-    instituicaoId: "esc-007",
+    instituicaoId: "cur-007",
     data: "09/09/2025",
     eixo: "Canais de escuta e denúncia",
     categoria: "Omissão em ocorrência grave",
@@ -1248,40 +1841,40 @@ export const denuncias: Denuncia[] = [
       "Ausência de encaminhamento de ocorrência ao conselho tutelar. Certificação suspensa após apuração.",
     relato:
       "Uma ocorrência grave envolvendo uma aluna teria sido tratada apenas internamente, sem a notificação obrigatória ao conselho tutelar prevista no ECA.",
-    responsavel: "Diego Almeida · SIS-AV-0052",
+    responsavel: responsavelDaApuracao("João Bezerra"),
     prazo: "09/10/2025",
     andamento: [
       {
         data: "09/09/2025",
         titulo: "Relato recebido pelo canal público",
         detalhe: "Protocolo gerado e gravado na cadeia da instituição.",
-        responsavel: "Canal público SIS",
+        responsavel: CANAL,
       },
       {
         data: "10/09/2025",
         titulo: "Triagem concluída · gravidade alta",
         detalhe:
           "Prioridade máxima: o relato trata de notificação obrigatória prevista no ECA, art. 13.",
-        responsavel: "Coordenação de certificação SIS",
+        responsavel: COORD,
       },
       {
         data: "16/09/2025",
         titulo: "Avaliação extraordinária realizada",
         detalhe:
           "Visita presencial não localizou registro de encaminhamento ao conselho tutelar no período.",
-        responsavel: "Diego Almeida · SIS-AV-0052",
+        responsavel: responsavelDaApuracao("João Bezerra"),
       },
       {
         data: "25/09/2025",
         titulo: "Apuração concluída · procedente",
         detalhe: "Omissão confirmada. Caso comunicado ao conselho tutelar do município.",
-        responsavel: "Coordenação de certificação SIS",
+        responsavel: COORD,
       },
       {
         data: "26/09/2025",
         titulo: "Certificação suspensa",
         detalhe: "Suspensão gravada na cadeia; a ficha pública da instituição passou a exibi-la.",
-        responsavel: "Coordenação de certificação SIS",
+        responsavel: COORD,
       },
     ],
     providencias: [
@@ -1306,34 +1899,34 @@ export const denuncias: Denuncia[] = [
       "Relato sobre acesso irrestrito à internet no laboratório. Verificado filtro de conteúdo ativo e registro de uso.",
     relato:
       "O laboratório de informática estaria liberando acesso irrestrito à internet nas aulas livres, sem filtro de conteúdo nem acompanhamento de professor.",
-    responsavel: "Larissa Souza · SIS-AV-0044",
+    responsavel: responsavelDaApuracao("Tiago Menezes"),
     prazo: "10/06/2026",
     andamento: [
       {
         data: "11/05/2026",
         titulo: "Relato recebido pelo canal público",
         detalhe: "Protocolo gerado e gravado na cadeia da instituição.",
-        responsavel: "Canal público SIS",
+        responsavel: CANAL,
       },
       {
         data: "12/05/2026",
         titulo: "Triagem concluída · gravidade baixa",
         detalhe:
           "Rebaixado do piso médio da natureza informada: o relato aponta configuração técnica, sem menção a exposição de criança. Verificação documental, sem visita extraordinária.",
-        responsavel: "Coordenação de certificação SIS",
+        responsavel: COORD,
       },
       {
         data: "21/05/2026",
         titulo: "Verificação técnica realizada",
         detalhe:
           "Filtro de conteúdo ativo, registro de uso por estação e escala de professor responsável confirmados.",
-        responsavel: "Larissa Souza · SIS-AV-0044",
+        responsavel: responsavelDaApuracao("Tiago Menezes"),
       },
       {
         data: "29/05/2026",
         titulo: "Apuração concluída · improcedente",
         detalhe: "Controles previstos no eixo estão em funcionamento. Nenhuma medida aplicada.",
-        responsavel: "Coordenação de certificação SIS",
+        responsavel: COORD,
       },
     ],
     providencias: [
@@ -1345,38 +1938,38 @@ export const denuncias: Denuncia[] = [
     impactoNoSelo: "Sem efeito sobre a certificação vigente.",
   },
   {
+    /* Único caso ainda sem triagem, e recente de propósito: é o que demonstra
+       que a gravidade não existe antes da classificação do SIS. */
     protocolo: "DEN-2026-0251",
     instituicaoId: "cre-202",
-    data: "10/07/2026",
+    data: "24/07/2026",
     eixo: "Acessibilidade e inclusão",
     categoria: "Acolhimento de criança com deficiência",
     natureza: "Falta de acessibilidade ou exclusão",
     status: "Recebida",
     gravidade: null,
     resumo:
-      "Relato de recusa de matrícula por falta de estrutura de acolhimento. Encaminhado para apuração pela rede gestora.",
+      "Relato de recusa de matrícula por falta de estrutura de acolhimento. Na fila de triagem.",
     relato:
       "Uma família teria sido orientada a procurar outra unidade porque a creche não teria estrutura para acolher uma criança com deficiência, sem que a recusa fosse formalizada por escrito.",
-    responsavel: "Coordenação de certificação SIS",
-    prazo: "09/08/2026",
+    responsavel: COORD,
+    prazo: "23/08/2026",
     andamento: [
       {
-        data: "10/07/2026",
+        data: "24/07/2026",
         titulo: "Relato recebido pelo canal público",
         detalhe: "Protocolo gerado e gravado na cadeia da instituição.",
-        responsavel: "Canal público SIS",
+        responsavel: CANAL,
       },
       {
-        data: "11/07/2026",
-        titulo: "Encaminhado à rede gestora",
+        data: "27/07/2026",
+        titulo: "Encaminhado para triagem",
         detalhe:
-          "Apuração conjunta com a rede, que responde pela política de matrícula das unidades.",
-        responsavel: "Coordenação de certificação SIS",
+          "Na fila de classificação de gravidade; avaliador responsável ainda em designação.",
+        responsavel: COORD,
       },
     ],
-    providencias: [
-      "Apuração conjunta com a rede gestora, que responde pela política de matrícula.",
-    ],
+    providencias: [],
     desfecho: null,
     impactoNoSelo: "Nenhuma medida até a conclusão da triagem.",
   },
@@ -1386,6 +1979,21 @@ export const denunciasDaInstituicao = (instituicaoId: string) =>
   denuncias.filter((d) => d.instituicaoId === instituicaoId);
 
 export const denunciaPorProtocolo = new Map(denuncias.map((d) => [d.protocolo, d]));
+
+/**
+ * Próximo protocolo do canal público.
+ *
+ * O formato é o mesmo da fila do portal (`DEN-aaaa-nnnn`): quem denuncia guarda
+ * um número que a instituição e o SIS reconhecem. Um formato só para o
+ * comprovante tornaria o protocolo inútil justamente para quem mais precisa
+ * dele — e `SIS-aaaa-...` colidiria com o token de certificação.
+ */
+export const proximoProtocolo = (ano: number, jaEmitidos = 0) => {
+  const maior = denuncias
+    .filter((d) => d.protocolo.startsWith(`DEN-${ano}-`))
+    .reduce((max, d) => Math.max(max, Number(d.protocolo.slice(-4)) || 0), 0);
+  return `DEN-${ano}-${String(maior + 1 + jaEmitidos).padStart(4, "0")}`;
+};
 
 /**
  * Como aquele nível de gravidade foi parar ali.
@@ -1415,87 +2023,40 @@ export function origemDaGravidade(d: Denuncia) {
 export const denunciaEmAberto = (d: Denuncia) =>
   d.status === "Recebida" || d.status === "Em apuração";
 
-export type Avaliador = {
-  nome: string;
-  formacao: string;
-  registro: string;
-  regiao: string;
-  avaliacoes: number;
-  status: "Ativo" | "Em formação" | "Inativo";
-};
+/** Apuração em aberto cujo prazo já passou da data de referência. */
+export const denunciaAtrasada = (d: Denuncia) => denunciaEmAberto(d) && jaPassou(d.prazo);
 
-/** Rede de profissionais credenciados — visão exclusiva da equipe SIS. */
-export const avaliadores: Avaliador[] = [
-  {
-    nome: "Márcia Torres",
-    formacao: "Pedagoga",
-    registro: "SIS-AV-0031",
-    regiao: "SP · Interior",
-    avaliacoes: 24,
-    status: "Ativo",
-  },
-  {
-    nome: "Larissa Souza",
-    formacao: "Psicóloga",
-    registro: "SIS-AV-0044",
-    regiao: "RJ · Região metropolitana",
-    avaliacoes: 19,
-    status: "Ativo",
-  },
-  {
-    nome: "Diego Almeida",
-    formacao: "Psicólogo",
-    registro: "SIS-AV-0052",
-    regiao: "MG · Belo Horizonte",
-    avaliacoes: 17,
-    status: "Ativo",
-  },
-  {
-    nome: "Camila Nunes",
-    formacao: "Assistente social",
-    registro: "SIS-AV-0058",
-    regiao: "PR · Curitiba",
-    avaliacoes: 14,
-    status: "Ativo",
-  },
-  {
-    nome: "Rafael Prado",
-    formacao: "Educador físico",
-    registro: "SIS-AV-0063",
-    regiao: "CE · Fortaleza",
-    avaliacoes: 11,
-    status: "Ativo",
-  },
-  {
-    nome: "João Bezerra",
-    formacao: "Psicólogo",
-    registro: "SIS-AV-0027",
-    regiao: "RS · Porto Alegre",
-    avaliacoes: 9,
-    status: "Inativo",
-  },
-  {
-    nome: "Priscila Marques",
-    formacao: "Arquiteta · acessibilidade",
-    registro: "SIS-AV-0071",
-    regiao: "PE · Recife",
-    avaliacoes: 2,
-    status: "Em formação",
-  },
-];
+/**
+ * Denúncia já triada e ainda em aberto.
+ *
+ * A ficha pública só publica o que passou pela triagem: antes dela, o relato é
+ * uma alegação que o SIS ainda não avaliou, e a cadeia registra o recebimento
+ * sem que a instituição carregue publicamente uma acusação não apurada. O
+ * evento existe desde o primeiro minuto; a visibilidade é que espera.
+ */
+export const denunciaPublica = (d: Denuncia) => d.gravidade !== null;
+
+/* ---------------------------------------------------------------------------
+ * Livro de registros.
+ * ------------------------------------------------------------------------ */
 
 export type RegistroBlockchain = {
   bloco: string;
   evento: string;
   data: string;
   hash: string;
-  tipo: "certificacao" | "avaliacao" | "denuncia" | "renovacao" | "atualizacao";
+  tipo: "certificacao" | "avaliacao" | "denuncia" | "renovacao" | "atualizacao" | "suspensao";
   instituicaoId: string;
   /**
    * O que o evento registra — mesma chave usada para gerar o hash. Permite ir
    * da tela do assunto (uma etapa de denúncia, por exemplo) até o bloco.
    */
   referencia: string;
+  /**
+   * Visível na consulta pública. Falso apenas para etapa de denúncia ainda não
+   * triada: o bloco existe e é auditável, mas a ficha pública não o exibe.
+   */
+  publico: boolean;
 };
 
 const rotuloTipoAvaliacao: Record<Avaliacao["tipo"], RegistroBlockchain["tipo"]> = {
@@ -1504,59 +2065,79 @@ const rotuloTipoAvaliacao: Record<Avaliacao["tipo"], RegistroBlockchain["tipo"]>
   Extraordinária: "avaliacao",
 };
 
+type RegistroBruto = {
+  evento: string;
+  data: string;
+  tipo: RegistroBlockchain["tipo"];
+  instituicaoId: string;
+  chave: string;
+  publico: boolean;
+};
+
 /**
  * Livro de registros da rede.
  *
- * Cada evento do ciclo — avaliação, emissão de selo, subselo, denúncia — vira
- * um registro. É construído a partir dos mesmos dados que alimentam as outras
- * telas, de forma que o histórico nunca conte uma versão diferente dos fatos.
+ * Cada evento do ciclo — avaliação, emissão de selo, subselo, denúncia,
+ * suspensão — vira um registro. É construído a partir dos mesmos dados que
+ * alimentam as outras telas, de forma que o histórico nunca conte uma versão
+ * diferente dos fatos.
  */
-export const registros: RegistroBlockchain[] = [
-  ...avaliacoes
-    .filter((a) => a.status !== "Agendada")
-    .map((a) => ({
-      evento:
-        a.status === "Reprovada"
-          ? `Avaliação ${a.tipo.toLowerCase()} reprovada`
-          : a.status === "Em andamento"
-            ? `Avaliação ${a.tipo.toLowerCase()} iniciada`
-            : `Avaliação ${a.tipo.toLowerCase()} registrada${a.pontuacao !== null ? ` com ${a.pontuacao} pontos` : ""}`,
-      data: a.data,
-      tipo: rotuloTipoAvaliacao[a.tipo],
-      instituicaoId: a.instituicaoId,
-      chave: a.id,
+export const registros: RegistroBlockchain[] = (
+  [
+    ...avaliacoes
+      .filter((a) => a.status !== "Agendada")
+      .map((a) => ({
+        evento:
+          a.status === "Reprovada"
+            ? `Avaliação ${a.tipo.toLowerCase()} reprovada`
+            : a.status === "Em andamento"
+              ? `Avaliação ${a.tipo.toLowerCase()} iniciada`
+              : `Avaliação ${a.tipo.toLowerCase()} registrada${a.pontuacao !== null ? ` com ${a.pontuacao} pontos` : ""}`,
+        data: a.data,
+        tipo: rotuloTipoAvaliacao[a.tipo],
+        instituicaoId: a.instituicaoId,
+        chave: a.id,
+        publico: true,
+      })),
+    ...certificacoes.map((c) => ({
+      evento: `Certificação emitida para o nível ${c.nivel} · token ${c.token}`,
+      data: c.emissao,
+      tipo: "certificacao" as const,
+      instituicaoId: c.instituicaoId,
+      chave: `cert:${c.instituicaoId}`,
+      publico: true,
     })),
-  ...certificacoes.map((c) => ({
-    evento: `Certificação emitida para o nível ${c.nivel} · token ${c.token}`,
-    data: c.emissao,
-    tipo: "certificacao" as const,
-    instituicaoId: c.instituicaoId,
-    chave: `cert:${c.instituicaoId}`,
-  })),
-  ...institutions.flatMap((i) =>
-    i.subselos.map((s) => ({
-      evento: `Subselo concedido: ${s}`,
-      data: i.ultimaAvaliacao,
-      tipo: "atualizacao" as const,
-      instituicaoId: i.id,
-      chave: `sub:${i.id}:${s}`,
-    })),
-  ),
-  /* Cada etapa da apuração entra na cadeia — é isso que permite à instituição
-     acompanhar o andamento sem depender da palavra de quem apura. */
-  ...denuncias.flatMap((d) =>
-    d.andamento.map((e, i) => ({
-      evento: `Denúncia ${d.protocolo} · ${e.titulo}`,
-      data: e.data,
-      tipo: "denuncia" as const,
-      instituicaoId: d.instituicaoId,
-      chave: `${d.protocolo}:${i}`,
-    })),
-  ),
-]
+    ...institutions
+      .filter((i) => i.subselos.length > 0 && i.ultimaAvaliacao !== "-")
+      .flatMap((i) =>
+        i.subselos.map((s) => ({
+          evento: `Subselo concedido: ${s}`,
+          data: i.ultimaAvaliacao,
+          tipo: "atualizacao" as const,
+          instituicaoId: i.id,
+          chave: `sub:${i.id}:${s}`,
+          publico: true,
+        })),
+      ),
+    /* Cada etapa da apuração entra na cadeia — é isso que permite à instituição
+       acompanhar o andamento sem depender da palavra de quem apura. Etapa de
+       caso ainda não triado entra igual, mas fora da vitrine pública. */
+    ...denuncias.flatMap((d) =>
+      d.andamento.map((e, i) => ({
+        evento: `Denúncia ${d.protocolo} · ${e.titulo}`,
+        data: e.data,
+        tipo: (e.titulo.startsWith("Certificação suspensa") ? "suspensao" : "denuncia") as
+          "suspensao" | "denuncia",
+        instituicaoId: d.instituicaoId,
+        chave: `${d.protocolo}:${i}`,
+        publico: denunciaPublica(d),
+      })),
+    ),
+  ] satisfies RegistroBruto[]
+)
   // Ordem cronológica dá o número de bloco; depois invertemos para exibir o
   // mais recente primeiro, sem que o bloco deixe de crescer com o tempo.
-  .sort((a, b) => ordemPorData(a.data) - ordemPorData(b.data))
+  .sort((a, b) => ordemPorData(a.data) - ordemPorData(b.data) || a.chave.localeCompare(b.chave))
   .map((r, idx) => ({
     evento: r.evento,
     data: r.data,
@@ -1565,11 +2146,16 @@ export const registros: RegistroBlockchain[] = [
     bloco: `#${10321 + idx * 7}`,
     hash: hashDemo(r.chave),
     referencia: r.chave,
+    publico: r.publico,
   }))
   .reverse();
 
 export const registrosDaInstituicao = (instituicaoId: string) =>
   registros.filter((r) => r.instituicaoId === instituicaoId);
+
+/** Só o que a ficha pública exibe: etapa de caso não triado fica de fora. */
+export const registrosPublicosDaInstituicao = (instituicaoId: string) =>
+  registros.filter((r) => r.instituicaoId === instituicaoId && r.publico);
 
 export const registroPorReferencia = new Map(registros.map((r) => [r.referencia, r]));
 
@@ -1581,12 +2167,18 @@ export const registroDaEtapa = (protocolo: string, indice: number) =>
 export const registrosDaDenuncia = (protocolo: string) =>
   registros.filter((r) => r.referencia.startsWith(`${protocolo}:`));
 
+/* ---------------------------------------------------------------------------
+ * Plano de adequação.
+ * ------------------------------------------------------------------------ */
+
 export type ItemPlano = {
   eixo: string;
   acao: string;
   base: string;
   prazo: string;
   status: "Em andamento" | "Pendente";
+  /** Eixo abaixo do piso eliminatório do modelo: bloqueia a próxima emissão. */
+  eliminatorio: boolean;
 };
 
 /** Ação recomendada por eixo quando a nota fica abaixo do patamar de referência. */
@@ -1608,13 +2200,16 @@ const acaoPorEixo: Record<string, string> = {
 /**
  * Plano de adequação da instituição.
  *
- * Derivado das notas: todo eixo abaixo de 85 entra com uma ação recomendada. O
- * prazo é proporcional à distância do patamar — quanto menor a nota, mais curto
- * o prazo, porque é onde o risco à criança é maior.
+ * Derivado das notas: todo eixo abaixo do patamar de referência entra com uma
+ * ação recomendada. O prazo é proporcional à distância do patamar — quanto
+ * menor a nota, mais curto o prazo, porque é onde o risco à criança é maior.
  */
-export const planoDeAdequacao = (inst: Institution): ItemPlano[] =>
-  inst.criterios
-    .filter((c) => c.nota < 85)
+export const planoDeAdequacao = (inst: Institution): ItemPlano[] => {
+  const modelo = apuracoes.get(inst.id)?.modelo;
+  const piso = modelo?.notaMinimaPorEixo ?? 60;
+
+  return inst.criterios
+    .filter((c) => c.nota < PATAMAR_DE_REFERENCIA)
     .sort((a, b) => a.nota - b.nota)
     .map((c) => ({
       eixo: c.nome,
@@ -1622,36 +2217,83 @@ export const planoDeAdequacao = (inst: Institution): ItemPlano[] =>
       base: c.base,
       prazo: c.nota < 70 ? "30 dias" : c.nota < 80 ? "60 dias" : "90 dias",
       status: c.nota < 75 ? "Em andamento" : "Pendente",
+      // No piso, um ponto para baixo já impede a próxima emissão.
+      eliminatorio: c.nota <= piso,
     }));
+};
 
-/** Consolidado de um conjunto de instituições — base dos painéis de rede e SIS. */
+/**
+ * Próximo nível a alcançar e quantos pontos faltam.
+ *
+ * As faixas vêm do modelo da instituição, não de números fixos: em Saúde e
+ * Terapias o Bronze começa em 65, e prometer "faltam X para o Prata" com a
+ * régua da Educação Básica daria uma meta errada.
+ */
+export const proximoNivel = (inst: Institution) => {
+  const a = apuracoes.get(inst.id);
+  if (!a || a.nota === null) return null;
+
+  const acima = [...a.modelo.faixas]
+    .sort((x, y) => x.minimo - y.minimo)
+    .find((f) => f.minimo > a.nota!);
+
+  if (!acima) return null;
+  return { nivel: acima.nivel, alvo: acima.minimo, faltam: acima.minimo - a.nota };
+};
+
+/* ---------------------------------------------------------------------------
+ * Consolidados.
+ * ------------------------------------------------------------------------ */
+
+/**
+ * Consolidado de um conjunto de instituições — base dos painéis de rede e SIS.
+ *
+ * `porNivel` conta apenas selo vigente, de forma que a soma dos três níveis é
+ * sempre igual a `certificadas`. Contar nível de instituição suspensa ou ainda
+ * sem emissão fazia o indicador dizer "10 selos ativos" e detalhar 12.
+ */
 export const resumoDoConjunto = (lista: Institution[]) => {
-  const comNota = lista.filter((i) => i.pontuacao !== null);
   const ids = new Set(lista.map((i) => i.id));
   const denunciasDoEscopo = denuncias.filter((d) => ids.has(d.instituicaoId));
+  const vigentes = lista.filter((i) => temSeloVigente(i.status));
+  const comNota = lista
+    .map((i) => apuracoes.get(i.id)?.nota)
+    .filter((n): n is number => n !== null && n !== undefined);
+
+  const certsDoEscopo = certificacoes.filter((c) => ids.has(c.instituicaoId));
 
   return {
     total: lista.length,
-    certificadas: lista.filter((i) => i.status === "Certificada").length,
+    certificadas: vigentes.length,
+    aguardandoEmissao: lista.filter((i) => i.status === "Aguardando emissão").length,
     emAvaliacao: lista.filter((i) => i.status === "Em avaliação").length,
     pendentes: lista.filter((i) => i.status === "Pendente").length,
     suspensas: lista.filter((i) => i.status === "Suspensa").length,
     porNivel: {
-      Ouro: lista.filter((i) => i.nivel === "Ouro").length,
-      Prata: lista.filter((i) => i.nivel === "Prata").length,
-      Bronze: lista.filter((i) => i.nivel === "Bronze").length,
+      Ouro: vigentes.filter((i) => nivelDaInstituicao(i.id) === "Ouro").length,
+      Prata: vigentes.filter((i) => nivelDaInstituicao(i.id) === "Prata").length,
+      Bronze: vigentes.filter((i) => nivelDaInstituicao(i.id) === "Bronze").length,
     } satisfies Record<Nivel, number>,
-    media: comNota.length
-      ? Math.round(comNota.reduce((s, i) => s + (i.pontuacao ?? 0), 0) / comNota.length)
-      : null,
-    subselos: lista.reduce((s, i) => s + i.subselos.length, 0),
+    media: comNota.length ? Math.round(comNota.reduce((s, n) => s + n, 0) / comNota.length) : null,
+    subselos: vigentes.reduce((s, i) => s + i.subselos.length, 0),
     denuncias: denunciasDoEscopo.length,
     denunciasAbertas: denunciasDoEscopo.filter(denunciaEmAberto).length,
+    denunciasAtrasadas: denunciasDoEscopo.filter(denunciaAtrasada).length,
     avaliacoesAbertas: avaliacoes.filter(
       (a) => ids.has(a.instituicaoId) && a.status !== "Aprovada" && a.status !== "Reprovada",
     ).length,
+    /** Selos vigentes a menos de 90 dias do vencimento. */
+    aVencer: certsDoEscopo.filter((c) => c.status === "A vencer").length,
+    vencidos: certsDoEscopo.filter((c) => c.status === "Vencida").length,
+    /** Eixos abaixo do piso eliminatório em todo o conjunto. */
+    eixosCriticos: lista.reduce(
+      (s, i) => s + (apuracoes.get(i.id)?.eixosReprovados.length ?? 0),
+      0,
+    ),
   };
 };
+
+export type ResumoDoConjunto = ReturnType<typeof resumoDoConjunto>;
 
 /** Média por eixo no conjunto — mostra onde a rede inteira está fraca. */
 export const mediaPorEixo = (lista: Institution[]) =>
@@ -1665,3 +2307,11 @@ export const mediaPorEixo = (lista: Institution[]) =>
       media: notas.length ? Math.round(notas.reduce((s, n) => s + n, 0) / notas.length) : null,
     };
   });
+
+/** Certificações do escopo ordenadas por urgência de renovação. */
+export const renovacoesProximas = (lista: Institution[]) => {
+  const ids = new Set(lista.map((i) => i.id));
+  return certificacoes
+    .filter((c) => ids.has(c.instituicaoId) && c.status !== "Suspensa")
+    .sort((a, b) => a.diasParaVencer - b.diasParaVencer);
+};

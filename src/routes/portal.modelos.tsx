@@ -20,6 +20,17 @@ import { SealChip } from "@/components/Seal";
 import { SubseloBadge } from "@/components/SubseloBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -54,8 +65,7 @@ import {
   eixosComPesoIgual,
   faixasPadrao,
   institutionPorId,
-  nivelPorFaixa,
-  notaPonderada,
+  resultadoDaAvaliacao,
   subselos,
   tiposDeInstituicao,
   type EixoDoModelo,
@@ -65,6 +75,7 @@ import {
   type TipoInstituicao,
 } from "@/lib/mock-data";
 import type { Escopo } from "@/lib/portal-access";
+import { useSelo } from "@/lib/selo-efetivo";
 
 export const Route = createFileRoute("/portal/modelos")({
   head: () => ({
@@ -98,6 +109,7 @@ const rascunhoVazio = (): Rascunho => ({
   tiposElegiveis: [],
   eixos: eixosComPesoIgual(),
   notaMinima: 60,
+  notaMinimaPorEixo: 60,
   faixas: faixasPadrao(),
   validadeMeses: 12,
   requisitos: "",
@@ -112,6 +124,7 @@ const paraRascunho = (m: ModeloCertificacao): Rascunho => ({
   tiposElegiveis: [...m.tiposElegiveis],
   eixos: m.eixos.map((e) => ({ ...e })),
   notaMinima: m.notaMinima,
+  notaMinimaPorEixo: m.notaMinimaPorEixo,
   faixas: m.faixas.map((f) => ({ ...f })),
   validadeMeses: m.validadeMeses,
   requisitos: m.requisitos.join("\n"),
@@ -137,14 +150,38 @@ function validar(r: Rascunho): string[] {
   if (r.tiposElegiveis.length === 0) erros.push("Marque ao menos um tipo de instituição elegível.");
   if (soma !== 100) erros.push(`Os pesos dos eixos somam ${soma}. Precisam somar 100.`);
   if (r.notaMinima < 1 || r.notaMinima > 100) erros.push("A nota mínima fica entre 1 e 100.");
+  if (r.notaMinimaPorEixo < 1 || r.notaMinimaPorEixo > 100)
+    erros.push("O piso por eixo fica entre 1 e 100.");
+  if (r.notaMinimaPorEixo > r.notaMinima)
+    erros.push(
+      "O piso por eixo não pode ser maior que a nota mínima da média: nenhuma instituição conseguiria passar.",
+    );
   if (r.validadeMeses < 1 || r.validadeMeses > 60)
     erros.push("A validade fica entre 1 e 60 meses.");
 
-  const [ouro, prata, bronze] = r.faixas;
-  if (!(ouro.minimo > prata.minimo && prata.minimo > bronze.minimo))
+  /* Ordenamos em vez de desestruturar por posição: a validação não pode depender
+     de o array vir na ordem Ouro/Prata/Bronze. */
+  const ordenadas = [...r.faixas].sort((a, b) => b.minimo - a.minimo);
+  const crescente = ordenadas.every((f, i) => i === 0 || f.minimo < ordenadas[i - 1].minimo);
+  const nivelDe = (n: Nivel) => r.faixas.find((f) => f.nivel === n);
+  const bronze = nivelDe("Bronze");
+  const prata = nivelDe("Prata");
+  const ouro = nivelDe("Ouro");
+
+  if (!bronze || !prata || !ouro)
+    erros.push("O modelo precisa das três faixas: Bronze, Prata e Ouro.");
+  else if (!crescente || !(ouro.minimo > prata.minimo && prata.minimo > bronze.minimo))
     erros.push("As faixas precisam ser crescentes: Bronze < Prata < Ouro.");
-  if (bronze.minimo < r.notaMinima)
-    erros.push("A faixa Bronze não pode começar abaixo da nota mínima de aprovação.");
+  else if (bronze.minimo !== r.notaMinima)
+    /* Antes a regra era "Bronze não pode começar abaixo da nota mínima", e dois
+       dos modelos publicados a violavam — abrir e republicar "Saúde e Terapias"
+       sem mudar nada dava erro. A regra correta é mais forte e mais simples: a
+       faixa mais baixa começa exatamente no corte, porque uma faixa acima do
+       corte deixaria uma janela de notas aprovadas sem nível nenhum. */
+    erros.push(
+      `A faixa Bronze precisa começar exatamente na nota mínima de aprovação (${r.notaMinima}): acima dela, notas aprovadas ficariam sem nível; abaixo, o Bronze descreveria uma faixa que nunca é concedida.`,
+    );
+
   if (!r.requisitos.split("\n").some((l) => l.trim()))
     erros.push("Liste ao menos um documento ou evidência exigida.");
 
@@ -343,12 +380,21 @@ function FormularioDeModelo({
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <CampoNumero
             id="nota-minima"
-            label="Nota mínima"
+            label="Nota mínima da média"
             valor={r.notaMinima}
             min={1}
             max={100}
             sufixo="pts"
             onChange={(n) => alterar("notaMinima", n)}
+          />
+          <CampoNumero
+            id="piso-eixo"
+            label="Piso por eixo"
+            valor={r.notaMinimaPorEixo}
+            min={1}
+            max={100}
+            sufixo="pts"
+            onChange={(n) => alterar("notaMinimaPorEixo", n)}
           />
           {r.faixas.map((f) => (
             <CampoNumero
@@ -363,6 +409,13 @@ function FormularioDeModelo({
             />
           ))}
         </div>
+
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          O <strong className="font-semibold text-foreground">piso por eixo</strong> é eliminatório:
+          nenhum eixo pode ficar abaixo dele, mesmo que a média passe o corte. É o que impede uma
+          escola com acessibilidade em ruína e todo o resto impecável de receber selo — numa
+          certificação de proteção infantil, o risco concentrado importa mais que a média.
+        </p>
       </fieldset>
 
       {/* Vigência e evidências ------------------------------------------ */}
@@ -515,6 +568,7 @@ function DialogoDeAtribuicao({
   candidatas: Institution[];
 }) {
   const { atribuir } = useCatalogo();
+  const selo = useSelo();
   const [aberto, setAberto] = useState(false);
   const [instituicaoId, setInstituicaoId] = useState("");
   const [avaliador, setAvaliador] = useState("");
@@ -528,9 +582,16 @@ function DialogoDeAtribuicao({
   const [emitida, setEmitida] = useState<Emissao | null>(null);
 
   const inst = instituicaoId ? candidatas.find((i) => i.id === instituicaoId) : null;
-  const nota = notaPonderada(modelo, notas);
-  const nivel = nivelPorFaixa(modelo, nota);
-  const podeEmitir = Boolean(inst) && Boolean(avaliador) && nivel !== null;
+  const apuracao = resultadoDaAvaliacao(modelo, notas);
+  const nota = apuracao.nota;
+  const nivel = apuracao.nivel;
+
+  /* Uma instituição com selo vigente não recebe segunda emissão: dois selos
+     válidos ao mesmo tempo tornariam ambíguo qual deles a família está
+     consultando. Para trocar, é renovação ou reavaliação extraordinária. */
+  const seloVigente = inst && selo.status(inst) === "Certificada" ? selo.certificacao(inst) : null;
+
+  const podeEmitir = Boolean(inst) && Boolean(avaliador) && nivel !== null && !seloVigente;
 
   const limpar = () => {
     setInstituicaoId("");
@@ -575,8 +636,9 @@ function DialogoDeAtribuicao({
               </p>
               <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
                 Nível {emitida.nivel} com {emitida.pontuacao} pontos, emitido em {emitida.emissao} e
-                válido até {emitida.validade}. Numa emissão real, este token passaria a aparecer na
-                ficha pública da instituição.
+                válido até {emitida.validade}. O selo já aparece na ficha pública da instituição, na
+                consulta pública e nos indicadores do portal — gravado apenas no seu navegador,
+                porque o protótipo não tem contrato em rede, mas repercutindo em todas as telas.
               </p>
             </div>
             <DialogFooter>
@@ -676,18 +738,50 @@ function DialogoDeAtribuicao({
                     <SealChip nivel={nivel} className="mt-1" />
                   ) : (
                     <p className="mt-1 text-sm font-semibold text-destructive">
-                      Abaixo do corte de {modelo.notaMinima} pontos
+                      {apuracao.eixosReprovados.length
+                        ? "Eixo abaixo do piso eliminatório"
+                        : `Abaixo do corte de ${modelo.notaMinima} pontos`}
                     </p>
                   )}
                 </div>
               </div>
               {!nivel && (
                 <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                  Sem emissão: a instituição recebe plano de adequação e nova avaliação. Reprovar é
-                  um resultado do processo, não uma falha do formulário.
+                  {apuracao.eixosReprovados.length ? (
+                    <>
+                      A média de {nota} pontos passaria o corte, mas{" "}
+                      <strong className="font-semibold text-foreground">
+                        {apuracao.eixosReprovados.join(", ")}
+                      </strong>{" "}
+                      ficou abaixo dos {modelo.notaMinimaPorEixo} pontos exigidos por eixo. Média
+                      alta não compensa um eixo em ruína.
+                    </>
+                  ) : (
+                    <>
+                      Sem emissão: a instituição recebe plano de adequação e nova avaliação.
+                      Reprovar é um resultado do processo, não uma falha do formulário.
+                    </>
+                  )}
                 </p>
               )}
             </div>
+
+            {/* Bloqueio de emissão duplicada, explicado no lugar onde a pessoa
+                tentaria fazê-la. */}
+            {seloVigente && (
+              <div className="rounded-lg border border-brand-amber/40 bg-brand-amber/10 p-4 text-sm">
+                <p className="flex items-center gap-2 font-semibold text-brand-amber">
+                  <AlertTriangle className="size-4" aria-hidden /> Esta instituição já tem selo
+                  vigente
+                </p>
+                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                  {inst?.nome} tem o token {seloVigente.token} válido até {seloVigente.validade}.
+                  Dois selos válidos ao mesmo tempo tornariam ambíguo qual deles a família está
+                  consultando. Para substituí-lo, abra uma renovação ou uma avaliação
+                  extraordinária.
+                </p>
+              </div>
+            )}
 
             {modelo.subselosElegiveis.length > 0 && (
               <div>
@@ -740,7 +834,7 @@ function DialogoDeAtribuicao({
               <Button
                 disabled={!podeEmitir}
                 onClick={() => {
-                  const feita = atribuir({
+                  const r = atribuir({
                     modeloId: modelo.id,
                     instituicaoId,
                     notas,
@@ -749,7 +843,7 @@ function DialogoDeAtribuicao({
                     responsavel: "Ana Ribeiro",
                     observacoes,
                   });
-                  if (feita) setEmitida(feita);
+                  if (r.ok) setEmitida(r.emissao);
                 }}
               >
                 <ShieldCheck className="size-4" aria-hidden /> Registrar na blockchain
@@ -950,9 +1044,32 @@ function Catalogo({ escopo }: { escopo: Escopo }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-sm font-semibold">Catálogo de modelos</h2>
         <div className="flex flex-wrap items-center gap-2">
-          <Button size="sm" variant="ghost" onClick={restaurarPadrao}>
-            <RotateCcw className="size-4" aria-hidden /> Restaurar catálogo padrão
-          </Button>
+          {/* Restaurar descarta modelos e emissões criados na sessão. Ação
+              destrutiva sem confirmação é fácil de disparar por engano. */}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button size="sm" variant="ghost">
+                <RotateCcw className="size-4" aria-hidden /> Restaurar catálogo padrão
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Restaurar o catálogo padrão?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Os modelos criados ou editados nesta sessão e as{" "}
+                  {emissoes.length === 1 ? "1 certificação" : `${emissoes.length} certificações`}{" "}
+                  atribuídas serão descartados, e o catálogo volta aos quatro modelos originais.
+                  Numa operação real isso não existiria: modelo publicado se arquiva, não se apaga.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={restaurarPadrao}>
+                  Restaurar e descartar
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           <DialogoDeModelo />
         </div>
       </div>

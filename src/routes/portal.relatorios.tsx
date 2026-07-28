@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { TrendingUp, Award, ShieldCheck, Megaphone } from "lucide-react";
+import { TrendingUp, Award, CalendarClock, Megaphone } from "lucide-react";
 
 import { PortalLayout } from "@/components/PortalLayout";
 import { Indicador, Painel, Vazio, BarraDeNota, AvisoDemo } from "@/components/PortalUI";
@@ -14,12 +14,14 @@ import {
 } from "@/components/ui/table";
 import {
   denuncias,
+  denunciaAtrasada,
   denunciaEmAberto,
   mediaPorEixo,
   resumoDoConjunto,
   type Institution,
 } from "@/lib/mock-data";
 import type { Escopo } from "@/lib/portal-access";
+import { useResumoComEmissoes, useSelo } from "@/lib/selo-efetivo";
 
 export const Route = createFileRoute("/portal/relatorios")({
   head: () => ({
@@ -46,16 +48,19 @@ function Relatorios() {
 }
 
 function Consolidado({ escopo }: { escopo: Escopo }) {
+  const selo = useSelo();
   const lista = escopo.instituicoes;
-  const resumo = resumoDoConjunto(lista);
+  const resumo = useResumoComEmissoes(lista, resumoDoConjunto(lista));
   const eixosDoEscopo = mediaPorEixo(lista).filter((e) => e.media !== null);
   const ids = new Set(lista.map((i) => i.id));
   const doEscopo = denuncias.filter((d) => ids.has(d.instituicaoId));
   const procedentes = doEscopo.filter((d) => d.status === "Procedente").length;
+  const atrasadas = doEscopo.filter(denunciaAtrasada).length;
 
-  const ranking = [...lista]
-    .filter((i): i is Institution & { pontuacao: number } => i.pontuacao !== null)
-    .sort((a, b) => b.pontuacao - a.pontuacao);
+  const ranking = lista
+    .map((i) => ({ inst: i, nota: selo.pontuacao(i), nivel: selo.nivel(i) }))
+    .filter((r): r is { inst: Institution; nota: number; nivel: typeof r.nivel } => r.nota !== null)
+    .sort((a, b) => b.nota - a.nota);
 
   const conformidade = resumo.total ? Math.round((resumo.certificadas / resumo.total) * 100) : 0;
 
@@ -73,21 +78,31 @@ function Consolidado({ escopo }: { escopo: Escopo }) {
           icon={Award}
           label="Média de pontuação"
           valor={resumo.media ?? "-"}
-          detalhe={`${resumo.porNivel.Ouro} Ouro · ${resumo.porNivel.Prata} Prata · ${resumo.porNivel.Bronze} Bronze`}
+          /* Média de todas as notas apuradas; a distribuição por nível conta só
+             selo vigente, e é por isso que o rótulo abaixo diz "vigentes". */
+          detalhe={`Selos vigentes: ${resumo.porNivel.Ouro} Ouro · ${resumo.porNivel.Prata} Prata · ${resumo.porNivel.Bronze} Bronze`}
         />
         <Indicador
-          icon={ShieldCheck}
-          label="Subselos temáticos"
-          valor={resumo.subselos}
-          detalhe="Inclusão, acessibilidade e boas práticas"
-          tom="teal"
+          icon={CalendarClock}
+          label="Renovações a preparar"
+          valor={resumo.aVencer + resumo.vencidos}
+          detalhe={
+            resumo.vencidos
+              ? `${resumo.vencidos} vencido(s) · ${resumo.aVencer} a menos de 90 dias`
+              : "Selos a menos de 90 dias do vencimento"
+          }
+          tom={resumo.vencidos ? "destructive" : "amber"}
         />
         <Indicador
           icon={Megaphone}
           label="Denúncias procedentes"
           valor={procedentes}
-          detalhe={`${doEscopo.filter(denunciaEmAberto).length} ainda em aberto`}
-          tom={procedentes ? "amber" : "green"}
+          detalhe={
+            atrasadas
+              ? `${doEscopo.filter(denunciaEmAberto).length} em aberto · ${atrasadas} com prazo vencido`
+              : `${doEscopo.filter(denunciaEmAberto).length} ainda em aberto`
+          }
+          tom={atrasadas ? "destructive" : procedentes ? "amber" : "green"}
         />
       </div>
 
@@ -121,7 +136,8 @@ function Consolidado({ escopo }: { escopo: Escopo }) {
           <div className="space-y-4 p-5">
             {(
               [
-                { label: "Certificadas", v: resumo.certificadas, c: "bg-success" },
+                { label: "Com selo vigente", v: resumo.certificadas, c: "bg-success" },
+                { label: "Aguardando emissão", v: resumo.aguardandoEmissao, c: "bg-brand-amber" },
                 { label: "Em avaliação", v: resumo.emAvaliacao, c: "bg-brand-blue" },
                 {
                   label: "Aguardando primeira visita",
@@ -180,21 +196,21 @@ function Consolidado({ escopo }: { escopo: Escopo }) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {ranking.map((i, idx) => (
-                  <TableRow key={i.id}>
+                {ranking.map((r, idx) => (
+                  <TableRow key={r.inst.id}>
                     <TableCell className="font-mono text-sm text-muted-foreground">
                       {idx + 1}
                     </TableCell>
                     <TableCell className="font-medium">
-                      {i.nome}
+                      {r.inst.nome}
                       <span className="block text-xs text-muted-foreground">
-                        {i.cidade} - {i.uf}
+                        {r.inst.cidade} - {r.inst.uf}
                       </span>
                     </TableCell>
-                    <TableCell>{i.nivel ? <SealChip nivel={i.nivel} /> : "-"}</TableCell>
-                    <TableCell className="font-mono text-sm font-semibold">{i.pontuacao}</TableCell>
+                    <TableCell>{r.nivel ? <SealChip nivel={r.nivel} /> : "-"}</TableCell>
+                    <TableCell className="font-mono text-sm font-semibold">{r.nota}</TableCell>
                     <TableCell>
-                      <BarraDeNota nota={i.pontuacao} rotulo={i.nome} />
+                      <BarraDeNota nota={r.nota} rotulo={r.inst.nome} />
                     </TableCell>
                   </TableRow>
                 ))}

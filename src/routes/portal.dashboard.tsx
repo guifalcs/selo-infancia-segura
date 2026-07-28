@@ -14,7 +14,14 @@ import {
 } from "lucide-react";
 
 import { PortalLayout } from "@/components/PortalLayout";
-import { Indicador, Painel, Vazio, BarraDeNota } from "@/components/PortalUI";
+import {
+  Indicador,
+  Painel,
+  Vazio,
+  BarraDeNota,
+  PrazoBadge,
+  ValidadeBadge,
+} from "@/components/PortalUI";
 import { StatusBadge } from "@/components/StatusBadge";
 import { SealChip, Seal } from "@/components/Seal";
 import { SubseloBadge } from "@/components/SubseloBadge";
@@ -30,20 +37,24 @@ import {
 } from "@/components/ui/table";
 import {
   avaliacoesDaInstituicao,
-  certificacaoDaInstituicao,
   denuncias,
+  denunciaAtrasada,
   denunciaEmAberto,
   denunciasDaInstituicao,
   institutionPorId,
   mediaPorEixo,
+  nivelSugerido,
+  PATAMAR_DE_REFERENCIA,
   planoDeAdequacao,
+  pontuacaoDaInstituicao,
   redes,
   registros,
-  registrosDaInstituicao,
+  renovacoesProximas,
   resumoDoConjunto,
   type Institution,
 } from "@/lib/mock-data";
 import type { Escopo } from "@/lib/portal-access";
+import { useResumoComEmissoes, useSelo, type Selo } from "@/lib/selo-efetivo";
 
 export const Route = createFileRoute("/portal/dashboard")({
   head: () => ({
@@ -66,57 +77,74 @@ function Dashboard() {
       title="Visão geral"
       subtitle="Situação atual do que está sob sua responsabilidade"
     >
-      {(escopo) =>
-        escopo.papel === "unidade" ? (
-          <PainelDaUnidade escopo={escopo} />
-        ) : escopo.papel === "rede" ? (
-          <PainelDaRede escopo={escopo} />
-        ) : (
-          <PainelDoSIS escopo={escopo} />
-        )
-      }
+      {(escopo) => <Conteudo escopo={escopo} />}
     </PortalLayout>
   );
+}
+
+/**
+ * O selo efetivo é resolvido uma vez, aqui, e passado aos três painéis.
+ *
+ * Cada painel chamando o próprio hook funcionaria, mas concentrar a leitura num
+ * ponto deixa explícito que os três enxergam exatamente a mesma base — inclusive
+ * as emissões feitas durante a demonstração.
+ */
+function Conteudo({ escopo }: { escopo: Escopo }) {
+  const selo = useSelo();
+
+  if (escopo.papel === "unidade") return <PainelDaUnidade escopo={escopo} selo={selo} />;
+  if (escopo.papel === "rede") return <PainelDaRede escopo={escopo} selo={selo} />;
+  return <PainelDoSIS escopo={escopo} selo={selo} />;
 }
 
 /* -------------------------------------------------------------------------- */
 /* Unidade — uma instituição só, olhando para o próprio selo.                 */
 /* -------------------------------------------------------------------------- */
 
-function PainelDaUnidade({ escopo }: { escopo: Escopo }) {
+function PainelDaUnidade({ escopo, selo }: { escopo: Escopo; selo: Selo }) {
   const inst = escopo.instituicao;
   if (!inst) return <Vazio>Nenhuma instituição vinculada a este acesso.</Vazio>;
 
-  const cert = certificacaoDaInstituicao(inst.id);
+  const cert = selo.certificacao(inst);
+  const nivel = selo.nivel(inst);
+  const nota = selo.pontuacao(inst);
+  const validade = selo.validade(inst);
+  const situacao = selo.status(inst);
   const plano = planoDeAdequacao(inst);
   const minhasDenuncias = denunciasDaInstituicao(inst.id);
   const abertas = minhasDenuncias.filter(denunciaEmAberto);
+  const atrasadas = minhasDenuncias.filter(denunciaAtrasada);
   const proxima = avaliacoesDaInstituicao(inst.id).find(
     (a) => a.status === "Agendada" || a.status === "Em andamento",
   );
-  const historico = registrosDaInstituicao(inst.id);
+  const historico = selo.registros(inst);
+  const criterios = selo.criterios(inst);
 
   return (
     <div className="space-y-6">
       {/* Cartão do selo — é o que a instituição vem ver primeiro. */}
       <section className="overflow-hidden rounded-xl border bg-card shadow-sm">
         <div className="flex flex-col gap-6 p-6 sm:flex-row sm:items-center">
-          {inst.nivel ? (
-            <Seal nivel={inst.nivel} className="size-32 shrink-0" />
+          {nivel ? (
+            <Seal
+              nivel={nivel}
+              className={`size-32 shrink-0 ${situacao === "Suspensa" ? "opacity-40 grayscale" : ""}`}
+            />
           ) : (
-            <div className="grid size-32 shrink-0 place-items-center rounded-full border border-dashed text-xs text-muted-foreground">
-              sem selo
+            <div className="grid size-32 shrink-0 place-items-center rounded-full border border-dashed text-center text-xs text-muted-foreground">
+              {situacao === "Aguardando emissão" ? "aguardando emissão" : "sem selo"}
             </div>
           )}
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <StatusBadge status={inst.status} />
+              <StatusBadge status={situacao} />
               {cert && (
                 <Badge variant="outline" className="font-mono text-[11px]">
                   {cert.token}
                 </Badge>
               )}
+              {situacao === "Certificada" && validade && <ValidadeBadge validade={validade} />}
             </div>
             <h2 className="mt-3 text-2xl font-bold leading-tight text-primary">{inst.nome}</h2>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -125,14 +153,14 @@ function PainelDaUnidade({ escopo }: { escopo: Escopo }) {
             </p>
             <dl className="mt-4 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-3">
               <div>
-                <dt className="text-xs text-muted-foreground">Pontuação</dt>
-                <dd className="font-semibold">
-                  {inst.pontuacao !== null ? `${inst.pontuacao}/100` : "-"}
-                </dd>
+                <dt className="text-xs text-muted-foreground">
+                  {situacao === "Aguardando emissão" ? "Nota apurada" : "Pontuação"}
+                </dt>
+                <dd className="font-semibold">{nota !== null ? `${nota}/100` : "-"}</dd>
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">Validade do selo</dt>
-                <dd className="font-semibold">{inst.validade ?? "-"}</dd>
+                <dd className="font-semibold">{validade ?? "-"}</dd>
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">Avaliador responsável</dt>
@@ -147,28 +175,47 @@ function PainelDaUnidade({ escopo }: { escopo: Escopo }) {
             </Link>
           </Button>
         </div>
+
+        {situacao === "Aguardando emissão" && (
+          <p className="border-t bg-brand-amber/5 px-6 py-3 text-xs leading-relaxed text-muted-foreground">
+            A avaliação fechou com {nota} pontos, o que corresponde ao nível{" "}
+            <strong className="font-semibold text-foreground">
+              {nivelSugerido(inst.id) ?? "abaixo do corte"}
+            </strong>{" "}
+            na régua do modelo. A emissão do selo é decisão da equipe SIS e ainda não aconteceu:
+            enquanto isso, a consulta pública mostra a instituição sem selo vigente.
+          </p>
+        )}
       </section>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Indicador
           icon={Gauge}
-          label="Pontuação atual"
-          valor={inst.pontuacao ?? "-"}
-          detalhe={inst.nivel ? `Nível ${inst.nivel}` : "Sem certificação vigente"}
+          label={situacao === "Aguardando emissão" ? "Nota apurada" : "Pontuação atual"}
+          valor={nota ?? "-"}
+          detalhe={nivel ? `Nível ${nivel}` : "Sem certificação vigente"}
         />
         <Indicador
           icon={ListChecks}
           label="Ações no plano de adequação"
           valor={plano.length}
-          detalhe={plano.length ? `${plano[0].eixo} é a prioridade` : "Nenhum eixo abaixo de 85"}
+          detalhe={
+            plano.length
+              ? `${plano[0].eixo} é a prioridade`
+              : `Nenhum eixo abaixo de ${PATAMAR_DE_REFERENCIA}`
+          }
           tom="amber"
         />
         <Indicador
           icon={Megaphone}
           label="Denúncias em aberto"
           valor={abertas.length}
-          detalhe={`${minhasDenuncias.length} no histórico`}
-          tom={abertas.length ? "destructive" : "green"}
+          detalhe={
+            atrasadas.length
+              ? `${atrasadas.length} com prazo vencido · ${minhasDenuncias.length} no histórico`
+              : `${minhasDenuncias.length} no histórico`
+          }
+          tom={atrasadas.length ? "destructive" : abertas.length ? "amber" : "green"}
         />
         <Indicador
           icon={CalendarClock}
@@ -185,11 +232,15 @@ function PainelDaUnidade({ escopo }: { escopo: Escopo }) {
           descricao="Notas da última avaliação presencial, de 0 a 100."
           className="lg:col-span-2"
         >
-          {inst.criterios.length === 0 ? (
-            <Vazio>A primeira avaliação ainda não foi realizada.</Vazio>
+          {criterios.length === 0 ? (
+            <Vazio>
+              {situacao === "Em avaliação"
+                ? "A visita presencial está em curso: as notas por eixo só entram quando a avaliação é fechada."
+                : "A primeira avaliação ainda não foi realizada."}
+            </Vazio>
           ) : (
             <ul className="space-y-5 p-5">
-              {inst.criterios.map((c) => (
+              {criterios.map((c) => (
                 <li key={c.nome}>
                   <div className="flex flex-wrap items-baseline justify-between gap-x-4">
                     <p className="text-sm font-semibold">{c.nome}</p>
@@ -205,11 +256,11 @@ function PainelDaUnidade({ escopo }: { escopo: Escopo }) {
 
         <div className="space-y-4">
           <Painel titulo="Subselos conquistados">
-            {inst.subselos.length === 0 ? (
+            {selo.subselos(inst).length === 0 ? (
               <Vazio>Nenhum subselo temático até agora.</Vazio>
             ) : (
               <ul className="space-y-3 p-5">
-                {inst.subselos.map((s) => (
+                {selo.subselos(inst).map((s) => (
                   <li key={s} className="flex items-center gap-3">
                     <SubseloBadge nome={s} size={44} decorativa />
                     <span className="text-sm font-medium">{s}</span>
@@ -260,7 +311,9 @@ function PainelDaUnidade({ escopo }: { escopo: Escopo }) {
         }
       >
         {plano.length === 0 ? (
-          <Vazio>Todos os eixos estão em 85 pontos ou mais. Nada pendente.</Vazio>
+          <Vazio>
+            Todos os eixos estão em {PATAMAR_DE_REFERENCIA} pontos ou mais. Nada pendente.
+          </Vazio>
         ) : (
           <ul className="divide-y">
             {plano.slice(0, 3).map((item) => (
@@ -272,6 +325,14 @@ function PainelDaUnidade({ escopo }: { escopo: Escopo }) {
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
+                  {item.eliminatorio && (
+                    <Badge
+                      variant="destructive"
+                      title="No piso: um ponto abaixo bloqueia a emissão"
+                    >
+                      Eliminatório
+                    </Badge>
+                  )}
                   <Badge variant="outline">{item.prazo}</Badge>
                   <Badge variant={item.status === "Em andamento" ? "default" : "secondary"}>
                     {item.status}
@@ -291,8 +352,22 @@ function PainelDaUnidade({ escopo }: { escopo: Escopo }) {
 /* -------------------------------------------------------------------------- */
 
 /** Linha da tabela de unidades, reaproveitada pelos painéis de rede e do SIS. */
-function LinhaDeUnidade({ inst, mostrarAcesso }: { inst: Institution; mostrarAcesso?: boolean }) {
-  const abertas = denunciasDaInstituicao(inst.id).filter(denunciaEmAberto).length;
+function LinhaDeUnidade({
+  inst,
+  selo,
+  mostrarAcesso,
+}: {
+  inst: Institution;
+  selo: Selo;
+  mostrarAcesso?: boolean;
+}) {
+  const doEscopo = denunciasDaInstituicao(inst.id);
+  const abertas = doEscopo.filter(denunciaEmAberto).length;
+  const atrasadas = doEscopo.filter(denunciaAtrasada).length;
+  const nivel = selo.nivel(inst);
+  const validade = selo.validade(inst);
+  const situacao = selo.status(inst);
+
   return (
     <TableRow>
       <TableCell className="font-medium">
@@ -307,14 +382,25 @@ function LinhaDeUnidade({ inst, mostrarAcesso }: { inst: Institution; mostrarAce
           {inst.tipo} · {inst.cidade} - {inst.uf}
         </span>
       </TableCell>
-      <TableCell>{inst.nivel ? <SealChip nivel={inst.nivel} /> : "-"}</TableCell>
-      <TableCell className="font-mono text-sm">{inst.pontuacao ?? "-"}</TableCell>
+      <TableCell>{nivel ? <SealChip nivel={nivel} /> : "-"}</TableCell>
+      <TableCell className="font-mono text-sm">{selo.pontuacao(inst) ?? "-"}</TableCell>
       <TableCell>
-        <StatusBadge status={inst.status} />
+        <StatusBadge status={situacao} />
       </TableCell>
       <TableCell>
-        {abertas > 0 ? (
-          <Badge variant="destructive">{abertas} em aberto</Badge>
+        {situacao === "Certificada" && validade ? (
+          <ValidadeBadge validade={validade} />
+        ) : (
+          <span className="text-xs text-muted-foreground">-</span>
+        )}
+      </TableCell>
+      <TableCell>
+        {atrasadas > 0 ? (
+          <Badge variant="destructive">{atrasadas} atrasada(s)</Badge>
+        ) : abertas > 0 ? (
+          <Badge className="border border-brand-amber/40 bg-brand-amber/10 text-brand-amber">
+            {abertas} em aberto
+          </Badge>
         ) : (
           <span className="text-xs text-muted-foreground">nenhuma</span>
         )}
@@ -332,14 +418,17 @@ function LinhaDeUnidade({ inst, mostrarAcesso }: { inst: Institution; mostrarAce
   );
 }
 
-function PainelDaRede({ escopo }: { escopo: Escopo }) {
+function PainelDaRede({ escopo, selo }: { escopo: Escopo; selo: Selo }) {
   const unidades = escopo.instituicoes;
-  const resumo = resumoDoConjunto(unidades);
+  const resumo = useResumoComEmissoes(unidades, resumoDoConjunto(unidades));
   const eixosDaRede = mediaPorEixo(unidades).filter((e) => e.media !== null);
   const maisFraco = [...eixosDaRede].sort((a, b) => (a.media ?? 0) - (b.media ?? 0))[0];
   const comAcesso = unidades.filter((u) => u.acessoProprio).length;
   const ids = new Set(unidades.map((u) => u.id));
   const abertas = denuncias.filter((d) => ids.has(d.instituicaoId) && denunciaEmAberto(d));
+  const renovacoes = renovacoesProximas(unidades).filter(
+    (c) => c.status === "A vencer" || c.status === "Vencida",
+  );
 
   return (
     <div className="space-y-6">
@@ -348,7 +437,7 @@ function PainelDaRede({ escopo }: { escopo: Escopo }) {
           icon={Building2}
           label="Unidades acompanhadas"
           valor={resumo.total}
-          detalhe={`${resumo.certificadas} certificadas · ${resumo.pendentes} sem avaliação`}
+          detalhe={`${resumo.certificadas} com selo vigente · ${resumo.pendentes} sem avaliação`}
         />
         <Indicador
           icon={Gauge}
@@ -361,8 +450,14 @@ function PainelDaRede({ escopo }: { escopo: Escopo }) {
           icon={Megaphone}
           label="Denúncias em aberto"
           valor={resumo.denunciasAbertas}
-          detalhe={`${resumo.denuncias} no total da rede`}
-          tom={resumo.denunciasAbertas ? "destructive" : "green"}
+          detalhe={
+            resumo.denunciasAtrasadas
+              ? `${resumo.denunciasAtrasadas} com prazo vencido · ${resumo.denuncias} no total`
+              : `${resumo.denuncias} no total da rede`
+          }
+          tom={
+            resumo.denunciasAtrasadas ? "destructive" : resumo.denunciasAbertas ? "amber" : "green"
+          }
         />
         <Indicador
           icon={KeyRound}
@@ -372,6 +467,27 @@ function PainelDaRede({ escopo }: { escopo: Escopo }) {
           tom="amber"
         />
       </div>
+
+      {/* Renovação é o que faz um selo de 12 meses significar algo. Sem esta
+          fila, a rede descobriria o vencimento pela reclamação de uma família. */}
+      {renovacoes.length > 0 && (
+        <Painel
+          titulo="Renovações a preparar"
+          descricao="Selos a menos de 90 dias do vencimento. A renovação exige nova avaliação presencial, que precisa ser agendada antes do prazo."
+        >
+          <ul className="divide-y">
+            {renovacoes.map((c) => (
+              <li key={c.instituicaoId} className="flex flex-wrap items-center gap-3 px-5 py-3">
+                <span className="min-w-0 flex-1 text-sm font-medium">
+                  {institutionPorId.get(c.instituicaoId)?.nome}
+                </span>
+                <SealChip nivel={c.nivel} />
+                <ValidadeBadge validade={c.validade} />
+              </li>
+            ))}
+          </ul>
+        </Painel>
+      )}
 
       <Painel
         titulo="Unidades da rede"
@@ -392,13 +508,14 @@ function PainelDaRede({ escopo }: { escopo: Escopo }) {
                 <TableHead>Selo</TableHead>
                 <TableHead>Nota</TableHead>
                 <TableHead>Situação</TableHead>
+                <TableHead>Validade</TableHead>
                 <TableHead>Denúncias</TableHead>
                 <TableHead>Acesso próprio</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {unidades.map((u) => (
-                <LinhaDeUnidade key={u.id} inst={u} mostrarAcesso />
+                <LinhaDeUnidade key={u.id} inst={u} selo={selo} mostrarAcesso />
               ))}
             </TableBody>
           </Table>
@@ -451,6 +568,7 @@ function PainelDaRede({ escopo }: { escopo: Escopo }) {
                       <Badge variant={d.status === "Recebida" ? "outline" : "default"}>
                         {d.status}
                       </Badge>
+                      <PrazoBadge prazo={d.prazo} />
                     </div>
                     <p className="mt-1 text-sm font-semibold">
                       {institutionPorId.get(d.instituicaoId)?.nome}
@@ -473,12 +591,15 @@ function PainelDaRede({ escopo }: { escopo: Escopo }) {
 /* SIS — administração do projeto.                                            */
 /* -------------------------------------------------------------------------- */
 
-function PainelDoSIS({ escopo }: { escopo: Escopo }) {
+function PainelDoSIS({ escopo, selo }: { escopo: Escopo; selo: Selo }) {
   const todas = escopo.instituicoes;
-  const resumo = resumoDoConjunto(todas);
-  const aguardandoEmissao = todas.filter((i) => i.status === "Em avaliação");
-  const semAvaliacao = todas.filter((i) => i.status === "Pendente");
+  const resumo = useResumoComEmissoes(todas, resumoDoConjunto(todas));
+  const filaDeEmissao = todas.filter((i) => selo.status(i) === "Aguardando emissão");
+  const semAvaliacao = todas.filter((i) => selo.status(i) === "Pendente");
   const ultimosRegistros = registros.slice(0, 6);
+  const renovacoes = renovacoesProximas(todas).filter(
+    (c) => c.status === "A vencer" || c.status === "Vencida",
+  );
 
   return (
     <div className="space-y-6">
@@ -487,11 +608,14 @@ function PainelDoSIS({ escopo }: { escopo: Escopo }) {
           icon={Building2}
           label="Instituições na base"
           valor={resumo.total}
-          detalhe={`${redes.length} redes clientes`}
+          detalhe={`${redes.length} redes clientes · ${resumo.suspensas} com selo suspenso`}
         />
+        {/* A soma dos três níveis é igual a este número por construção:
+            `porNivel` conta apenas selo vigente. Antes contava também suspensas
+            e avaliadas sem emissão, e o indicador dizia 10 detalhando 12. */}
         <Indicador
           icon={Award}
-          label="Selos ativos"
+          label="Selos vigentes"
           valor={resumo.certificadas}
           detalhe={`${resumo.porNivel.Ouro} Ouro · ${resumo.porNivel.Prata} Prata · ${resumo.porNivel.Bronze} Bronze`}
           tom="green"
@@ -507,15 +631,41 @@ function PainelDoSIS({ escopo }: { escopo: Escopo }) {
           icon={Megaphone}
           label="Denúncias em aberto"
           valor={resumo.denunciasAbertas}
-          detalhe={`${resumo.denuncias} registradas na plataforma`}
-          tom={resumo.denunciasAbertas ? "destructive" : "green"}
+          detalhe={
+            resumo.denunciasAtrasadas
+              ? `${resumo.denunciasAtrasadas} com prazo vencido · ${resumo.denuncias} na plataforma`
+              : `${resumo.denuncias} registradas na plataforma`
+          }
+          tom={
+            resumo.denunciasAtrasadas ? "destructive" : resumo.denunciasAbertas ? "amber" : "green"
+          }
         />
       </div>
+
+      {renovacoes.length > 0 && (
+        <Painel
+          titulo="Renovações a preparar"
+          descricao="Selos a menos de 90 dias do vencimento em toda a base. Renovar exige nova avaliação presencial, que precisa entrar na agenda dos credenciados."
+        >
+          <ul className="divide-y">
+            {renovacoes.map((c) => (
+              <li key={c.instituicaoId} className="flex flex-wrap items-center gap-3 px-5 py-3">
+                <span className="min-w-0 flex-1 text-sm font-medium">
+                  {institutionPorId.get(c.instituicaoId)?.nome}
+                </span>
+                <span className="font-mono text-xs text-muted-foreground">{c.token}</span>
+                <SealChip nivel={c.nivel} />
+                <ValidadeBadge validade={c.validade} />
+              </li>
+            ))}
+          </ul>
+        </Painel>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Painel
           titulo="Fila de emissão"
-          descricao="Avaliações concluídas aguardando decisão da equipe SIS."
+          descricao="Avaliações fechadas com nota apurada, cujo selo ainda não foi emitido. Enquanto a decisão não sai, a consulta pública mostra a instituição sem selo."
           className="lg:col-span-2"
           acoes={
             <Button asChild size="sm">
@@ -525,7 +675,7 @@ function PainelDoSIS({ escopo }: { escopo: Escopo }) {
             </Button>
           }
         >
-          {aguardandoEmissao.length === 0 ? (
+          {filaDeEmissao.length === 0 ? (
             <Vazio>Nenhuma avaliação aguardando emissão.</Vazio>
           ) : (
             <div className="overflow-x-auto">
@@ -539,28 +689,41 @@ function PainelDoSIS({ escopo }: { escopo: Escopo }) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {aguardandoEmissao.map((i) => (
-                    <TableRow key={i.id}>
-                      <TableCell className="font-medium">
-                        {i.nome}
-                        <span className="block text-xs text-muted-foreground">
-                          {i.cidade} - {i.uf}
-                        </span>
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">{i.pontuacao ?? "-"}</TableCell>
-                      <TableCell>{i.nivel ? <SealChip nivel={i.nivel} /> : "-"}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {i.avaliador ?? "-"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {filaDeEmissao.map((i) => {
+                    // Sugestão da régua do modelo, não selo: o nível só existe
+                    // depois da emissão.
+                    const sugerido = nivelSugerido(i.id);
+                    return (
+                      <TableRow key={i.id}>
+                        <TableCell className="font-medium">
+                          {i.nome}
+                          <span className="block text-xs text-muted-foreground">
+                            {i.cidade} - {i.uf}
+                          </span>
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {pontuacaoDaInstituicao(i.id) ?? "-"}
+                        </TableCell>
+                        <TableCell>
+                          {sugerido ? (
+                            <SealChip nivel={sugerido} />
+                          ) : (
+                            <span className="text-xs text-destructive">abaixo do corte</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {i.avaliador ?? "-"}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
           )}
         </Painel>
 
-        <Painel titulo="Distribuição por selo" descricao="Certificações vigentes na base inteira.">
+        <Painel titulo="Distribuição por selo" descricao="Somente certificações vigentes.">
           <div className="space-y-4 p-5">
             {(
               [

@@ -13,19 +13,23 @@ import {
   Megaphone,
   ShieldAlert,
   UserCheck,
+  EyeOff,
 } from "lucide-react";
 
 import { PortalLayout } from "@/components/PortalLayout";
 import { GravidadeBadge, StatusDenunciaBadge } from "@/components/DenunciaUI";
-import { Painel, Vazio, AvisoDemo } from "@/components/PortalUI";
+import { Painel, Vazio, AvisoDemo, PrazoBadge } from "@/components/PortalUI";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   denunciaEmAberto,
   denunciaPorProtocolo,
+  denunciaPublica,
   institutionPorId,
+  nivelDaInstituicao,
   origemDaGravidade,
   pisoDeGravidade,
+  pontuacaoDaInstituicao,
   registroDaEtapa,
   type Denuncia,
 } from "@/lib/mock-data";
@@ -156,6 +160,7 @@ function Conteudo({ escopo, denuncia }: { escopo: Escopo; denuncia: Denuncia | n
               valor: emAberto
                 ? denuncia.prazo
                 : (denuncia.andamento.at(-1)?.data ?? denuncia.prazo),
+              badge: emAberto ? <PrazoBadge prazo={denuncia.prazo} /> : null,
             },
             { icon: UserCheck, rotulo: "Responsável", valor: denuncia.responsavel },
             { icon: Building2, rotulo: "Instituição", valor: inst?.nome ?? denuncia.instituicaoId },
@@ -165,9 +170,24 @@ function Conteudo({ escopo, denuncia }: { escopo: Escopo; denuncia: Denuncia | n
                 <d.icon className="size-3.5 shrink-0" aria-hidden /> {d.rotulo}
               </dt>
               <dd className="mt-2 text-sm font-semibold leading-snug">{d.valor}</dd>
+              {"badge" in d && d.badge && <div className="mt-2">{d.badge}</div>}
             </div>
           ))}
         </dl>
+
+        {/* Enquanto não há triagem, o caso está na cadeia mas não na ficha
+            pública. Dizer isso onde a instituição lê o caso evita a leitura de
+            que a plataforma publica acusação não apurada. */}
+        {!denunciaPublica(denuncia) && (
+          <p className="mt-4 flex items-start gap-2 rounded-lg border border-dashed bg-muted/40 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+            <EyeOff className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+            <span>
+              Este relato já está gravado na cadeia, com bloco e hash próprios, mas ainda não
+              aparece na ficha pública da instituição: antes da triagem é alegação, não fato
+              apurado. A publicação acontece quando a gravidade é classificada.
+            </span>
+          </p>
+        )}
 
         <p className="mt-5 flex items-start gap-2 rounded-lg border border-dashed bg-muted/40 px-4 py-3 text-sm leading-relaxed">
           <Gavel className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
@@ -295,11 +315,13 @@ function Conteudo({ escopo, denuncia }: { escopo: Escopo; denuncia: Denuncia | n
                   </div>
                   <div className="flex justify-between gap-3">
                     <dt className="text-muted-foreground">Nível do selo</dt>
-                    <dd className="font-medium">{inst.nivel ?? "-"}</dd>
+                    <dd className="font-medium">{nivelDaInstituicao(inst.id) ?? "-"}</dd>
                   </div>
                   <div className="flex justify-between gap-3">
                     <dt className="text-muted-foreground">Pontuação</dt>
-                    <dd className="font-mono font-medium">{inst.pontuacao ?? "-"}</dd>
+                    <dd className="font-mono font-medium">
+                      {pontuacaoDaInstituicao(inst.id) ?? "-"}
+                    </dd>
                   </div>
                   <div className="flex justify-between gap-3">
                     <dt className="text-muted-foreground">Última avaliação</dt>

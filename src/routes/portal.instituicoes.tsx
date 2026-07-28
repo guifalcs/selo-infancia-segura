@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Search, Building2, KeyRound, Users } from "lucide-react";
 
 import { PortalLayout } from "@/components/PortalLayout";
-import { Painel, Vazio } from "@/components/PortalUI";
+import { Painel, Vazio, ValidadeBadge } from "@/components/PortalUI";
 import { StatusBadge } from "@/components/StatusBadge";
 import { SealChip } from "@/components/Seal";
 import { Badge } from "@/components/ui/badge";
@@ -16,8 +16,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { denunciaEmAberto, denunciasDaInstituicao, redes, type Institution } from "@/lib/mock-data";
+import {
+  denunciaAtrasada,
+  denunciaEmAberto,
+  denunciasDaInstituicao,
+  redes,
+  type Institution,
+} from "@/lib/mock-data";
 import type { Escopo } from "@/lib/portal-access";
+import { useSelo, type Selo } from "@/lib/selo-efetivo";
 
 export const Route = createFileRoute("/portal/instituicoes")({
   head: () => ({
@@ -45,9 +52,11 @@ function Instituicoes() {
 
 function TabelaDeInstituicoes({
   lista,
+  selo,
   mostrarAcesso,
 }: {
   lista: Institution[];
+  selo: Selo;
   /** Coluna de acesso concedido — só faz sentido em unidade de rede. */
   mostrarAcesso?: boolean;
 }) {
@@ -62,6 +71,7 @@ function TabelaDeInstituicoes({
             <TableHead className="whitespace-nowrap">Selo</TableHead>
             <TableHead className="whitespace-nowrap">Nota</TableHead>
             <TableHead className="whitespace-nowrap">Situação</TableHead>
+            <TableHead className="whitespace-nowrap">Validade</TableHead>
             <TableHead className="whitespace-nowrap">Última avaliação</TableHead>
             <TableHead className="whitespace-nowrap">Denúncias</TableHead>
             {mostrarAcesso && <TableHead className="whitespace-nowrap">Acesso próprio</TableHead>}
@@ -69,7 +79,12 @@ function TabelaDeInstituicoes({
         </TableHeader>
         <TableBody>
           {lista.map((i) => {
-            const abertas = denunciasDaInstituicao(i.id).filter(denunciaEmAberto).length;
+            const doEscopo = denunciasDaInstituicao(i.id);
+            const abertas = doEscopo.filter(denunciaEmAberto).length;
+            const atrasadas = doEscopo.filter(denunciaAtrasada).length;
+            const nivel = selo.nivel(i);
+            const validade = selo.validade(i);
+            const situacao = selo.status(i);
             return (
               <TableRow key={i.id}>
                 <TableCell className="font-medium">
@@ -84,17 +99,28 @@ function TabelaDeInstituicoes({
                     {i.tipo} · {i.cidade} - {i.uf}
                   </span>
                 </TableCell>
-                <TableCell>{i.nivel ? <SealChip nivel={i.nivel} /> : "-"}</TableCell>
-                <TableCell className="font-mono text-sm">{i.pontuacao ?? "-"}</TableCell>
+                <TableCell>{nivel ? <SealChip nivel={nivel} /> : "-"}</TableCell>
+                <TableCell className="font-mono text-sm">{selo.pontuacao(i) ?? "-"}</TableCell>
                 <TableCell>
-                  <StatusBadge status={i.status} />
+                  <StatusBadge status={situacao} />
+                </TableCell>
+                <TableCell>
+                  {situacao === "Certificada" && validade ? (
+                    <ValidadeBadge validade={validade} />
+                  ) : (
+                    <span className="text-xs text-muted-foreground">-</span>
+                  )}
                 </TableCell>
                 <TableCell className="whitespace-nowrap font-mono text-sm">
-                  {i.ultimaAvaliacao}
+                  {selo.ultimaAvaliacao(i)}
                 </TableCell>
                 <TableCell>
-                  {abertas > 0 ? (
-                    <Badge variant="destructive">{abertas} em aberto</Badge>
+                  {atrasadas > 0 ? (
+                    <Badge variant="destructive">{atrasadas} atrasada(s)</Badge>
+                  ) : abertas > 0 ? (
+                    <Badge className="border border-brand-amber/40 bg-brand-amber/10 text-brand-amber">
+                      {abertas} em aberto
+                    </Badge>
                   ) : (
                     <span className="text-xs text-muted-foreground">nenhuma</span>
                   )}
@@ -120,6 +146,7 @@ function TabelaDeInstituicoes({
 }
 
 function Lista({ escopo }: { escopo: Escopo }) {
+  const selo = useSelo();
   const [busca, setBusca] = useState("");
   const termo = busca.trim().toLowerCase();
   const filtrar = (lista: Institution[]) =>
@@ -151,7 +178,7 @@ function Lista({ escopo }: { escopo: Escopo }) {
         descricao="Cada unidade responde por suas próprias adequações; a rede acompanha o conjunto."
         acoes={campoDeBusca}
       >
-        <TabelaDeInstituicoes lista={filtrar(escopo.instituicoes)} mostrarAcesso />
+        <TabelaDeInstituicoes lista={filtrar(escopo.instituicoes)} selo={selo} mostrarAcesso />
       </Painel>
     );
   }
@@ -192,7 +219,7 @@ function Lista({ escopo }: { escopo: Escopo }) {
             titulo={rede.nome}
             descricao={`${rede.tipo} · ${rede.cidade} - ${rede.uf} · ${rede.plano} · responsável: ${rede.responsavel}`}
           >
-            <TabelaDeInstituicoes lista={unidades} mostrarAcesso />
+            <TabelaDeInstituicoes lista={unidades} selo={selo} mostrarAcesso />
           </Painel>
         );
       })}
@@ -201,7 +228,7 @@ function Lista({ escopo }: { escopo: Escopo }) {
         titulo="Clientes diretos"
         descricao="Instituições sem rede gestora: o relacionamento é direto com o SIS."
       >
-        <TabelaDeInstituicoes lista={diretas} />
+        <TabelaDeInstituicoes lista={diretas} selo={selo} />
       </Painel>
     </div>
   );

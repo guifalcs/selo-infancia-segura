@@ -1,17 +1,34 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ListChecks, Target, CalendarClock, TrendingUp, Megaphone } from "lucide-react";
+import {
+  ListChecks,
+  Target,
+  CalendarClock,
+  TrendingUp,
+  Megaphone,
+  AlertTriangle,
+} from "lucide-react";
 
 import { PortalLayout } from "@/components/PortalLayout";
-import { Indicador, Painel, Vazio, BarraDeNota, AvisoDemo } from "@/components/PortalUI";
+import {
+  Indicador,
+  Painel,
+  Vazio,
+  BarraDeNota,
+  AvisoDemo,
+  ValidadeBadge,
+} from "@/components/PortalUI";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  apuracaoDaInstituicao,
   denunciasDaInstituicao,
   niveis,
+  PATAMAR_DE_REFERENCIA,
   planoDeAdequacao,
-  type Institution,
+  proximoNivel,
 } from "@/lib/mock-data";
 import type { Escopo } from "@/lib/portal-access";
+import { useSelo } from "@/lib/selo-efetivo";
 
 export const Route = createFileRoute("/portal/plano")({
   head: () => ({
@@ -31,16 +48,6 @@ export const Route = createFileRoute("/portal/plano")({
   component: Plano,
 });
 
-/** Próximo nível a alcançar e quantos pontos faltam. */
-function proximoNivel(inst: Institution) {
-  const nota = inst.pontuacao;
-  if (nota === null) return null;
-  if (nota >= 90) return null;
-  const alvo = nota >= 75 ? 90 : 75;
-  const nivel = alvo === 90 ? "Ouro" : "Prata";
-  return { nivel, alvo, faltam: alvo - nota };
-}
-
 function Plano() {
   return (
     <PortalLayout
@@ -54,16 +61,22 @@ function Plano() {
 }
 
 function Conteudo({ escopo }: { escopo: Escopo }) {
+  const selo = useSelo();
   const inst = escopo.instituicao;
   if (!inst) return <Vazio>Nenhuma instituição vinculada a este acesso.</Vazio>;
 
   const itens = planoDeAdequacao(inst);
   const meta = proximoNivel(inst);
   const emAndamento = itens.filter((i) => i.status === "Em andamento").length;
+  const eliminatorios = itens.filter((i) => i.eliminatorio);
   const denunciasProcedentes = denunciasDaInstituicao(inst.id).filter(
     (d) => d.status === "Procedente",
   );
-  const faixaAtual = niveis.find((n) => n.nivel === inst.nivel);
+  const nivel = selo.nivel(inst);
+  const validade = selo.validade(inst);
+  const criterios = selo.criterios(inst);
+  const faixaAtual = niveis.find((n) => n.nivel === nivel);
+  const modelo = apuracaoDaInstituicao(inst.id)?.modelo;
 
   return (
     <div className="space-y-6">
@@ -72,7 +85,7 @@ function Conteudo({ escopo }: { escopo: Escopo }) {
           icon={ListChecks}
           label="Ações no plano"
           valor={itens.length}
-          detalhe="Eixos abaixo de 85 pontos"
+          detalhe={`Eixos abaixo de ${PATAMAR_DE_REFERENCIA} pontos`}
         />
         <Indicador
           icon={TrendingUp}
@@ -84,22 +97,56 @@ function Conteudo({ escopo }: { escopo: Escopo }) {
         <Indicador
           icon={Target}
           label={meta ? `Faltam para o ${meta.nivel}` : "Nível máximo"}
-          valor={meta ? `${meta.faltam} pts` : "Ouro"}
-          detalhe={meta ? `Meta: ${meta.alvo} pontos na média` : "Manter o padrão na renovação"}
+          valor={meta ? `${meta.faltam} pts` : (nivel ?? "-")}
+          detalhe={
+            meta
+              ? `Meta: ${meta.alvo} pontos na média, na régua do modelo ${modelo?.codigo ?? ""}`
+              : "Manter o padrão na renovação"
+          }
           tom="amber"
         />
         <Indicador
           icon={CalendarClock}
           label="Validade do selo atual"
-          valor={inst.validade ?? "-"}
+          valor={validade ?? "-"}
           detalhe="Renovação exige nova avaliação"
         />
       </div>
+
+      {/* A validade em dias vem primeiro porque é o que define a urgência de
+          tudo o que vem abaixo. */}
+      {validade && (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card px-4 py-3">
+          <span className="text-sm font-medium">Situação da certificação</span>
+          <ValidadeBadge validade={validade} />
+          <span className="text-xs text-muted-foreground">
+            A renovação exige nova avaliação presencial: as ações abaixo precisam estar concluídas
+            antes dela.
+          </span>
+        </div>
+      )}
 
       {faixaAtual && (
         <AvisoDemo>
           Nível atual <strong>{faixaAtual.nivel}</strong> ({faixaAtual.faixa}). {faixaAtual.resumo}
         </AvisoDemo>
+      )}
+
+      {/* Eixo no piso é a informação mais urgente do plano: não é "melhorar", é
+          "sem isto não há próxima emissão". */}
+      {eliminatorios.length > 0 && modelo && (
+        <p className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm leading-relaxed">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
+          <span>
+            <strong className="font-semibold">
+              {eliminatorios.length === 1 ? "Um eixo está" : `${eliminatorios.length} eixos estão`}{" "}
+              no piso eliminatório
+            </strong>{" "}
+            de {modelo.notaMinimaPorEixo} pontos ({eliminatorios.map((e) => e.eixo).join(", ")}). Um
+            ponto abaixo disso e a próxima avaliação não gera emissão, ainda que a média passe o
+            corte.
+          </span>
+        </p>
       )}
 
       <Painel
@@ -108,12 +155,13 @@ function Conteudo({ escopo }: { escopo: Escopo }) {
       >
         {itens.length === 0 ? (
           <Vazio>
-            Nenhum eixo abaixo de 85 pontos. Basta manter as evidências em ordem para a renovação.
+            Nenhum eixo abaixo de {PATAMAR_DE_REFERENCIA} pontos. Basta manter as evidências em
+            ordem para a renovação.
           </Vazio>
         ) : (
           <ol className="divide-y">
             {itens.map((item, idx) => {
-              const nota = inst.criterios.find((c) => c.nome === item.eixo)?.nota ?? 0;
+              const nota = criterios.find((c) => c.nome === item.eixo)?.nota ?? 0;
               return (
                 <li key={item.eixo} className="px-5 py-5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -127,6 +175,7 @@ function Conteudo({ escopo }: { escopo: Escopo }) {
                       <p className="mt-0.5 pl-7 text-xs text-muted-foreground">{item.base}</p>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
+                      {item.eliminatorio && <Badge variant="destructive">Eliminatório</Badge>}
                       <Badge variant="outline">Prazo {item.prazo}</Badge>
                       <Badge variant={item.status === "Em andamento" ? "default" : "secondary"}>
                         {item.status}

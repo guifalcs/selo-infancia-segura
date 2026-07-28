@@ -1,7 +1,16 @@
-import type { LucideIcon } from "lucide-react";
+import { AlertTriangle, CalendarCheck, CalendarClock, type LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { PATAMAR_DE_REFERENCIA, diasAPartirDeHoje, situacaoDaValidade } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
+
+/**
+ * Piso eliminatório usado para colorir uma nota fora do contexto de um modelo.
+ *
+ * Os modelos publicados hoje usam 60. Quando a barra é desenhada já sabendo o
+ * modelo, prefira o `notaMinimaPorEixo` dele.
+ */
+export const PISO_ELIMINATORIO_PADRAO = 60;
 
 /**
  * Peças de interface compartilhadas pelas telas do portal.
@@ -82,11 +91,18 @@ export function Vazio({ children }: { children: ReactNode }) {
   return <p className="px-5 py-10 text-center text-sm text-muted-foreground">{children}</p>;
 }
 
-/** Cor da nota por faixa: verde só a partir do patamar de referência. */
+/**
+ * Cor da nota por faixa.
+ *
+ * A régua é a mesma do plano de adequação, e não uma escala própria: verde
+ * significa "fora do plano", âmbar significa "no plano" e vermelho significa
+ * "abaixo do piso eliminatório, bloqueia a emissão". Antes a barra virava verde
+ * em 90 enquanto o plano usava 85 como patamar — duas cores contando histórias
+ * diferentes sobre o mesmo eixo, na mesma tela.
+ */
 export function corDaNota(nota: number) {
-  if (nota >= 90) return "bg-success";
-  if (nota >= 75) return "bg-brand-teal";
-  if (nota >= 60) return "bg-brand-amber";
+  if (nota >= PATAMAR_DE_REFERENCIA) return "bg-success";
+  if (nota >= PISO_ELIMINATORIO_PADRAO) return "bg-brand-amber";
   return "bg-destructive";
 }
 
@@ -117,5 +133,85 @@ export function AvisoDemo({ children }: { children: ReactNode }) {
     <p className="rounded-lg border border-dashed bg-card px-4 py-3 text-xs leading-relaxed text-muted-foreground">
       {children}
     </p>
+  );
+}
+
+/**
+ * Situação temporal de uma validade.
+ *
+ * Um selo de 12 meses só cumpre a promessa se a plataforma disser quando ele
+ * está acabando. Sem isto, a data de validade é texto decorativo e a renovação
+ * obrigatória depende de alguém lembrar.
+ */
+export function ValidadeBadge({ validade, className }: { validade: string; className?: string }) {
+  const temporal = situacaoDaValidade(validade);
+  if (!temporal) return null;
+
+  const { situacao, dias } = temporal;
+  const tom =
+    situacao === "Vencida"
+      ? "border-destructive/30 bg-destructive/10 text-destructive"
+      : situacao === "A vencer"
+        ? "border-brand-amber/40 bg-brand-amber/10 text-brand-amber"
+        : "border-success/30 bg-success/10 text-success";
+
+  /* Contagem em dias só onde ela muda o que alguém faz: perto do vencimento ou
+     depois dele. Fora dessa janela, a data diz mais que "faltam 339 dias". */
+  const texto =
+    situacao === "Vencida"
+      ? `Vencido há ${Math.abs(dias)} dias`
+      : situacao === "A vencer"
+        ? `Vence em ${dias} dias · ${validade}`
+        : `Vigente até ${validade}`;
+
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold",
+        tom,
+        className,
+      )}
+    >
+      {situacao === "Vigente" ? (
+        <CalendarCheck className="size-3.5" aria-hidden />
+      ) : (
+        <CalendarClock className="size-3.5" aria-hidden />
+      )}
+      {texto}
+    </span>
+  );
+}
+
+/**
+ * Prazo de apuração, marcado quando já passou.
+ *
+ * Uma fila que mostra prazo vencido com a mesma cara de prazo em dia esconde
+ * exatamente o caso que precisa de ação.
+ */
+export function PrazoBadge({ prazo, className }: { prazo: string; className?: string }) {
+  const dias = diasAPartirDeHoje(prazo);
+  if (dias === null) return null;
+
+  const atrasado = dias < 0;
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium",
+        atrasado
+          ? "border-destructive/30 bg-destructive/10 font-semibold text-destructive"
+          : "border-border text-muted-foreground",
+        className,
+      )}
+    >
+      {atrasado ? (
+        <>
+          <AlertTriangle className="size-3" aria-hidden /> Prazo vencido há {Math.abs(dias)} dias
+        </>
+      ) : (
+        <>
+          <CalendarClock className="size-3" aria-hidden /> Prazo em {dias} dias · {prazo}
+        </>
+      )}
+    </span>
   );
 }
