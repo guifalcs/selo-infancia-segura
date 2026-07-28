@@ -170,8 +170,8 @@ function Home() {
 
               <p className="mt-6 max-w-xl text-lg leading-relaxed text-foreground/80">
                 O SIS certifica escolas, creches, clínicas, clubes, parques, cursos e projetos
-                sociais quanto à segurança e à adequação do ambiente para crianças e adolescentes,
-                e publica esse histórico de forma aberta e auditável.
+                sociais quanto à segurança e à adequação do ambiente para crianças e adolescentes, e
+                publica esse histórico de forma aberta e auditável.
               </p>
 
               <p className="mt-4 max-w-xl leading-relaxed text-muted-foreground">

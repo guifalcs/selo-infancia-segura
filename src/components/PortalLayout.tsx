@@ -16,6 +16,7 @@ import {
   Check,
   ShieldAlert,
   Loader2,
+  Stamp,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
@@ -45,6 +46,7 @@ const navPorPapel = {
   admin: [
     { to: "/portal/dashboard", label: "Visão geral", icon: LayoutDashboard },
     { to: "/portal/instituicoes", label: "Clientes", icon: Building2 },
+    { to: "/portal/modelos", label: "Modelos de selo", icon: Stamp },
     { to: "/portal/certificacoes", label: "Certificações", icon: Award },
     { to: "/portal/auditorias", label: "Avaliações", icon: ClipboardCheck },
     { to: "/portal/denuncias", label: "Denúncias", icon: Megaphone },

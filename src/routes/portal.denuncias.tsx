@@ -1,17 +1,13 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Megaphone, ShieldAlert, CheckCircle2, EyeOff } from "lucide-react";
+import { Megaphone, ShieldAlert, CheckCircle2, Clock3, ChevronRight } from "lucide-react";
 
 import { PortalLayout } from "@/components/PortalLayout";
 import { Indicador, Painel, Vazio, AvisoDemo } from "@/components/PortalUI";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  denuncias,
-  denunciaEmAberto,
-  institutionPorId,
-  type StatusDenuncia,
-} from "@/lib/mock-data";
+import { GravidadeBadge, StatusDenunciaBadge } from "@/components/DenunciaUI";
+import { denuncias, denunciaEmAberto, institutionPorId, type Denuncia } from "@/lib/mock-data";
 import type { Escopo } from "@/lib/portal-access";
 
 export const Route = createFileRoute("/portal/denuncias")({
@@ -26,21 +22,11 @@ export const Route = createFileRoute("/portal/denuncias")({
   component: Denuncias,
 });
 
-const corDoStatus: Record<StatusDenuncia, string> = {
-  Recebida: "border-brand-blue/30 bg-brand-blue/10 text-brand-blue",
-  "Em apuração": "border-brand-amber/40 bg-brand-amber/10 text-brand-amber",
-  Procedente: "border-destructive/30 bg-destructive/10 text-destructive",
-  Improcedente: "border-success/30 bg-success/10 text-success",
-};
-
 const filtros = ["Todas", "Em aberto", "Concluídas"] as const;
 
 function Denuncias() {
   return (
-    <PortalLayout
-      title="Denúncias"
-      subtitle="Canal público de escuta: o autor nunca é exposto no portal"
-    >
+    <PortalLayout title="Denúncias" subtitle="Relatos recebidos pelo canal público de escuta">
       {(escopo) => <Fila escopo={escopo} />}
     </PortalLayout>
   );
@@ -57,7 +43,8 @@ function Fila({ escopo }: { escopo: Escopo }) {
 
   const abertas = doEscopo.filter(denunciaEmAberto);
   const procedentes = doEscopo.filter((d) => d.status === "Procedente");
-  const anonimas = doEscopo.filter((d) => d.canal === "Anônimo");
+  const graves = doEscopo.filter((d) => d.gravidade === "Alta" && denunciaEmAberto(d));
+  const semTriagem = doEscopo.filter((d) => d.gravidade === null);
 
   return (
     <div className="space-y-6">
@@ -78,17 +65,21 @@ function Fila({ escopo }: { escopo: Escopo }) {
           tom="amber"
         />
         <Indicador
-          icon={EyeOff}
-          label="Recebidas anonimamente"
-          valor={anonimas.length}
-          detalhe="Identidade nunca exibida no portal"
-          tom="teal"
+          icon={Clock3}
+          label="Gravidade alta em aberto"
+          valor={graves.length}
+          detalhe={
+            semTriagem.length
+              ? `Apuração prioritária · ${semTriagem.length} ainda sem triagem`
+              : "Apuração prioritária"
+          }
+          tom={graves.length ? "destructive" : "teal"}
         />
       </div>
 
       <Painel
         titulo="Relatos recebidos"
-        descricao="Cada denúncia entra na blockchain como evento, inclusive quando é apurada e considerada improcedente."
+        descricao="Clique em uma denúncia para ver o relato completo, a linha do tempo da apuração e o efeito sobre o selo."
         acoes={
           <div className="flex flex-wrap gap-1">
             {filtros.map((f) => (
@@ -113,29 +104,8 @@ function Fila({ escopo }: { escopo: Escopo }) {
         ) : (
           <ul className="divide-y">
             {lista.map((d) => (
-              <li key={d.protocolo} className="px-5 py-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-mono text-xs text-muted-foreground">{d.protocolo}</span>
-                  <span
-                    className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${corDoStatus[d.status]}`}
-                  >
-                    {d.status}
-                  </span>
-                  <Badge variant="outline">{d.canal}</Badge>
-                  <span className="ml-auto font-mono text-xs text-muted-foreground">{d.data}</span>
-                </div>
-
-                {escopo.papel !== "unidade" && (
-                  <p className="mt-2 text-sm font-semibold text-primary">
-                    {institutionPorId.get(d.instituicaoId)?.nome ?? d.instituicaoId}
-                  </p>
-                )}
-
-                <p className="mt-1 text-sm font-medium">{d.categoria}</p>
-                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{d.resumo}</p>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Eixo afetado: <strong className="font-semibold">{d.eixo}</strong>
-                </p>
+              <li key={d.protocolo}>
+                <ItemDaFila denuncia={d} mostrarInstituicao={escopo.papel !== "unidade"} />
               </li>
             ))}
           </ul>
@@ -143,10 +113,57 @@ function Fila({ escopo }: { escopo: Escopo }) {
       </Painel>
 
       <AvisoDemo>
+        A gravidade não é declarada por quem denuncia: sai da triagem do SIS, a partir do piso
+        automático da natureza informada, da leitura do relato e da recorrência de relatos no mesmo
+        eixo da unidade. Até a triagem acontecer, o caso não tem nível.{" "}
         {escopo.papel === "admin"
-          ? "A equipe SIS é quem classifica a denúncia, abre avaliação extraordinária e decide por suspender um selo. A instituição vê o teor e o encaminhamento, nunca a identidade de quem denunciou."
-          : "A instituição enxerga o teor e o andamento de cada relato, mas não quem o registrou: isso é o que mantém o canal utilizável por famílias e funcionários."}
+          ? "É a equipe SIS que classifica, abre avaliação extraordinária quando é o caso e decide por suspender um selo — e cada etapa vira um evento na cadeia, inclusive as que terminam em improcedência."
+          : "Cada etapa vira um evento na cadeia, inclusive as que terminam em improcedência: é o que faz o andamento não depender da palavra de quem apura."}
       </AvisoDemo>
     </div>
+  );
+}
+
+function ItemDaFila({
+  denuncia: d,
+  mostrarInstituicao,
+}: {
+  denuncia: Denuncia;
+  mostrarInstituicao: boolean;
+}) {
+  return (
+    <Link
+      to="/portal/denuncias/$protocolo"
+      params={{ protocolo: d.protocolo }}
+      className="flex items-start gap-3 px-5 py-4 transition-colors hover:bg-muted/50"
+    >
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-mono text-xs text-muted-foreground">{d.protocolo}</span>
+          <StatusDenunciaBadge status={d.status} />
+          <GravidadeBadge gravidade={d.gravidade} />
+          <span className="ml-auto font-mono text-xs text-muted-foreground">{d.data}</span>
+        </div>
+
+        {mostrarInstituicao && (
+          <p className="mt-2 text-sm font-semibold text-primary">
+            {institutionPorId.get(d.instituicaoId)?.nome ?? d.instituicaoId}
+          </p>
+        )}
+
+        <p className="mt-1 text-sm font-medium">{d.categoria}</p>
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{d.resumo}</p>
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <Badge variant="outline" className="font-normal">
+            {d.eixo}
+          </Badge>
+          <span>
+            {denunciaEmAberto(d) ? `Prazo de apuração: ${d.prazo}` : `Encerrada · ${d.responsavel}`}
+          </span>
+        </div>
+      </div>
+
+      <ChevronRight className="mt-1 size-4 shrink-0 text-muted-foreground" aria-hidden />
+    </Link>
   );
 }

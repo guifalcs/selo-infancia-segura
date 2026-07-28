@@ -20,10 +20,12 @@ import { Route as PortalDashboardRouteImport } from './routes/portal.dashboard'
 import { Route as PortalDenunciasRouteImport } from './routes/portal.denuncias'
 import { Route as PortalInstituicoesRouteImport } from './routes/portal.instituicoes'
 import { Route as PortalLoginRouteImport } from './routes/portal.login'
+import { Route as PortalModelosRouteImport } from './routes/portal.modelos'
 import { Route as PortalPlanoRouteImport } from './routes/portal.plano'
 import { Route as PortalRegistrosRouteImport } from './routes/portal.registros'
 import { Route as PortalRelatoriosRouteImport } from './routes/portal.relatorios'
 import { Route as CidadaoInstituicaoIdRouteImport } from './routes/cidadao.instituicao.$id'
+import { Route as PortalDenunciasProtocoloRouteImport } from './routes/portal.denuncias_.$protocolo'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -80,6 +82,11 @@ const PortalLoginRoute = PortalLoginRouteImport.update({
   path: '/portal/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PortalModelosRoute = PortalModelosRouteImport.update({
+  id: '/portal/modelos',
+  path: '/portal/modelos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PortalPlanoRoute = PortalPlanoRouteImport.update({
   id: '/portal/plano',
   path: '/portal/plano',
@@ -100,6 +107,12 @@ const CidadaoInstituicaoIdRoute = CidadaoInstituicaoIdRouteImport.update({
   path: '/cidadao/instituicao/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PortalDenunciasProtocoloRoute =
+  PortalDenunciasProtocoloRouteImport.update({
+    id: '/portal/denuncias_/$protocolo',
+    path: '/portal/denuncias/$protocolo',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -113,10 +126,12 @@ export interface FileRoutesByFullPath {
   '/portal/denuncias': typeof PortalDenunciasRoute
   '/portal/instituicoes': typeof PortalInstituicoesRoute
   '/portal/login': typeof PortalLoginRoute
+  '/portal/modelos': typeof PortalModelosRoute
   '/portal/plano': typeof PortalPlanoRoute
   '/portal/registros': typeof PortalRegistrosRoute
   '/portal/relatorios': typeof PortalRelatoriosRoute
   '/cidadao/instituicao/$id': typeof CidadaoInstituicaoIdRoute
+  '/portal/denuncias/$protocolo': typeof PortalDenunciasProtocoloRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -130,10 +145,12 @@ export interface FileRoutesByTo {
   '/portal/denuncias': typeof PortalDenunciasRoute
   '/portal/instituicoes': typeof PortalInstituicoesRoute
   '/portal/login': typeof PortalLoginRoute
+  '/portal/modelos': typeof PortalModelosRoute
   '/portal/plano': typeof PortalPlanoRoute
   '/portal/registros': typeof PortalRegistrosRoute
   '/portal/relatorios': typeof PortalRelatoriosRoute
   '/cidadao/instituicao/$id': typeof CidadaoInstituicaoIdRoute
+  '/portal/denuncias/$protocolo': typeof PortalDenunciasProtocoloRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -148,10 +165,12 @@ export interface FileRoutesById {
   '/portal/denuncias': typeof PortalDenunciasRoute
   '/portal/instituicoes': typeof PortalInstituicoesRoute
   '/portal/login': typeof PortalLoginRoute
+  '/portal/modelos': typeof PortalModelosRoute
   '/portal/plano': typeof PortalPlanoRoute
   '/portal/registros': typeof PortalRegistrosRoute
   '/portal/relatorios': typeof PortalRelatoriosRoute
   '/cidadao/instituicao/$id': typeof CidadaoInstituicaoIdRoute
+  '/portal/denuncias_/$protocolo': typeof PortalDenunciasProtocoloRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -167,10 +186,12 @@ export interface FileRouteTypes {
     | '/portal/denuncias'
     | '/portal/instituicoes'
     | '/portal/login'
+    | '/portal/modelos'
     | '/portal/plano'
     | '/portal/registros'
     | '/portal/relatorios'
     | '/cidadao/instituicao/$id'
+    | '/portal/denuncias/$protocolo'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -184,10 +205,12 @@ export interface FileRouteTypes {
     | '/portal/denuncias'
     | '/portal/instituicoes'
     | '/portal/login'
+    | '/portal/modelos'
     | '/portal/plano'
     | '/portal/registros'
     | '/portal/relatorios'
     | '/cidadao/instituicao/$id'
+    | '/portal/denuncias/$protocolo'
   id:
     | '__root__'
     | '/'
@@ -201,10 +224,12 @@ export interface FileRouteTypes {
     | '/portal/denuncias'
     | '/portal/instituicoes'
     | '/portal/login'
+    | '/portal/modelos'
     | '/portal/plano'
     | '/portal/registros'
     | '/portal/relatorios'
     | '/cidadao/instituicao/$id'
+    | '/portal/denuncias_/$protocolo'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -219,10 +244,12 @@ export interface RootRouteChildren {
   PortalDenunciasRoute: typeof PortalDenunciasRoute
   PortalInstituicoesRoute: typeof PortalInstituicoesRoute
   PortalLoginRoute: typeof PortalLoginRoute
+  PortalModelosRoute: typeof PortalModelosRoute
   PortalPlanoRoute: typeof PortalPlanoRoute
   PortalRegistrosRoute: typeof PortalRegistrosRoute
   PortalRelatoriosRoute: typeof PortalRelatoriosRoute
   CidadaoInstituicaoIdRoute: typeof CidadaoInstituicaoIdRoute
+  PortalDenunciasProtocoloRoute: typeof PortalDenunciasProtocoloRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -304,6 +331,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PortalLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/portal/modelos': {
+      id: '/portal/modelos'
+      path: '/portal/modelos'
+      fullPath: '/portal/modelos'
+      preLoaderRoute: typeof PortalModelosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/portal/plano': {
       id: '/portal/plano'
       path: '/portal/plano'
@@ -332,6 +366,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CidadaoInstituicaoIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/portal/denuncias_/$protocolo': {
+      id: '/portal/denuncias_/$protocolo'
+      path: '/portal/denuncias/$protocolo'
+      fullPath: '/portal/denuncias/$protocolo'
+      preLoaderRoute: typeof PortalDenunciasProtocoloRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -347,10 +388,12 @@ const rootRouteChildren: RootRouteChildren = {
   PortalDenunciasRoute: PortalDenunciasRoute,
   PortalInstituicoesRoute: PortalInstituicoesRoute,
   PortalLoginRoute: PortalLoginRoute,
+  PortalModelosRoute: PortalModelosRoute,
   PortalPlanoRoute: PortalPlanoRoute,
   PortalRegistrosRoute: PortalRegistrosRoute,
   PortalRelatoriosRoute: PortalRelatoriosRoute,
   CidadaoInstituicaoIdRoute: CidadaoInstituicaoIdRoute,
+  PortalDenunciasProtocoloRoute: PortalDenunciasProtocoloRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

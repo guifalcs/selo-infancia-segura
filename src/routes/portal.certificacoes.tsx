@@ -1,6 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Award, ShieldCheck, ExternalLink, Blocks, CheckCircle2, RefreshCw } from "lucide-react";
+import {
+  Award,
+  ShieldCheck,
+  ExternalLink,
+  Blocks,
+  CheckCircle2,
+  RefreshCw,
+  FileStack,
+} from "lucide-react";
 
 import { PortalLayout } from "@/components/PortalLayout";
 import { Indicador, Painel, Vazio, BarraDeNota } from "@/components/PortalUI";
@@ -27,9 +35,19 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useCatalogo } from "@/lib/certificacoes-store";
+import {
   certificacaoDaInstituicao,
-  hashDemo,
+  modelosParaTipo,
   niveis,
+  nivelPorFaixa,
+  notaPonderada,
   registrosDaInstituicao,
   resumoDoConjunto,
   type Institution,
@@ -212,21 +230,38 @@ function MinhaCertificacao({ escopo }: { escopo: Escopo }) {
 /**
  * Emissão de certificação — exclusiva da equipe SIS.
  *
- * No protótipo, a confirmação não grava nada: mostra o token e o hash que
- * seriam registrados. É deliberado deixar isso explícito na tela, para que
- * ninguém confunda a demonstração com uma emissão de verdade.
+ * Emitir é sempre aplicar um modelo publicado: é o modelo que diz qual é a nota
+ * de corte, quanto pesa cada eixo e por quanto tempo o selo vale. Sem modelo
+ * ativo para o tipo da instituição não há emissão, e a tela manda a pessoa para
+ * o catálogo em vez de inventar uma régua no meio do caminho.
+ *
+ * A confirmação grava só no navegador: mostra o token e o hash que seriam
+ * registrados. É deliberado deixar isso explícito, para que ninguém confunda a
+ * demonstração com uma emissão de verdade.
  */
 function DialogoDeEmissao({ inst }: { inst: Institution }) {
+  const { modelos, atribuir } = useCatalogo();
   const [aberto, setAberto] = useState(false);
-  const [emitido, setEmitido] = useState(false);
-  const token = `SIS-2026-${inst.id.replace(/\D/g, "").padStart(4, "0")}`;
+  const [modeloId, setModeloId] = useState("");
+  const [emitida, setEmitida] = useState<{ token: string; hash: string } | null>(null);
+
+  const disponiveis = modelosParaTipo(modelos, inst.tipo);
+  const modelo = disponiveis.find((m) => m.id === modeloId) ?? null;
+
+  // A nota vem da avaliação já lançada; o modelo só decide em que nível ela cai.
+  const notas = Object.fromEntries(inst.criterios.map((c) => [c.nome, c.nota]));
+  const nota = modelo ? notaPonderada(modelo, notas) : (inst.pontuacao ?? 0);
+  const nivel = modelo ? nivelPorFaixa(modelo, nota) : null;
 
   return (
     <Dialog
       open={aberto}
       onOpenChange={(v) => {
         setAberto(v);
-        if (!v) setEmitido(false);
+        if (!v) {
+          setEmitida(null);
+          setModeloId("");
+        }
       }}
     >
       <DialogTrigger asChild>
@@ -234,56 +269,131 @@ function DialogoDeEmissao({ inst }: { inst: Institution }) {
           <Award className="size-4" aria-hidden /> Emitir
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Emitir certificação para {inst.nome}</DialogTitle>
           <DialogDescription>
-            Confira a apuração antes de registrar o selo. O registro na blockchain é definitivo:
+            Escolha o modelo de selo e confira a apuração. O registro na blockchain é definitivo:
             correções posteriores entram como novo evento, nunca como edição.
           </DialogDescription>
         </DialogHeader>
 
-        <dl className="grid gap-3 text-sm sm:grid-cols-2">
-          <div>
-            <dt className="text-xs text-muted-foreground">Nota apurada</dt>
-            <dd className="font-semibold">{inst.pontuacao ?? "-"}/100</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-muted-foreground">Nível correspondente</dt>
-            <dd className="font-semibold">{inst.nivel ?? "-"}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-muted-foreground">Avaliador</dt>
-            <dd className="font-semibold">{inst.avaliador ?? "-"}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-muted-foreground">Validade</dt>
-            <dd className="font-semibold">12 meses a partir da emissão</dd>
-          </div>
-        </dl>
-
-        {emitido ? (
-          <div className="rounded-lg border border-success/30 bg-success/10 p-4 text-sm">
-            <p className="flex items-center gap-2 font-semibold text-success">
-              <CheckCircle2 className="size-4" aria-hidden /> Emissão simulada
-            </p>
-            <p className="mt-2 font-mono text-xs text-foreground">
-              token {token} · hash {hashDemo(`emissao:${inst.id}`)}
-            </p>
-            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-              Nada foi gravado: este protótipo não tem contrato em rede. Numa emissão real, o token
-              passaria a aparecer na ficha pública da instituição.
-            </p>
+        {disponiveis.length === 0 ? (
+          <div className="space-y-4">
+            <div className="rounded-lg border border-brand-amber/40 bg-brand-amber/10 p-4 text-sm">
+              <p className="font-semibold text-brand-amber">
+                Nenhum modelo ativo cobre “{inst.tipo}”
+              </p>
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                Publique um modelo que aceite este tipo de instituição antes de emitir. É o modelo
+                que define a régua da avaliação.
+              </p>
+            </div>
+            <DialogFooter>
+              <Button asChild>
+                <Link to="/portal/modelos">
+                  <FileStack className="size-4" aria-hidden /> Ir aos modelos de selo
+                </Link>
+              </Button>
+            </DialogFooter>
           </div>
         ) : (
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAberto(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={() => setEmitido(true)}>
-              <ShieldCheck className="size-4" aria-hidden /> Registrar na blockchain
-            </Button>
-          </DialogFooter>
+          <>
+            <div>
+              <label htmlFor="modelo-emissao" className="text-xs font-medium">
+                Modelo de selo aplicado
+              </label>
+              <Select value={modeloId} onValueChange={setModeloId}>
+                <SelectTrigger id="modelo-emissao" className="mt-1">
+                  <SelectValue placeholder="Selecione o modelo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {disponiveis.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.nome} · v{m.versao}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <dl className="grid gap-3 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-xs text-muted-foreground">
+                  {modelo ? "Nota na régua do modelo" : "Nota apurada"}
+                </dt>
+                <dd className="font-semibold">{nota}/100</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Nível correspondente</dt>
+                <dd className="font-semibold">
+                  {modelo
+                    ? (nivel ?? `Abaixo do corte de ${modelo.notaMinima} pontos`)
+                    : (inst.nivel ?? "-")}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Avaliador</dt>
+                <dd className="font-semibold">{inst.avaliador ?? "-"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Validade</dt>
+                <dd className="font-semibold">
+                  {modelo ? `${modelo.validadeMeses} meses` : "definida pelo modelo"}
+                </dd>
+              </div>
+            </dl>
+
+            {modelo && (
+              <div className="rounded-lg border border-dashed p-4">
+                <p className="text-xs font-medium">Evidências exigidas por este modelo</p>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-muted-foreground">
+                  {modelo.requisitos.map((req) => (
+                    <li key={req}>{req}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {emitida ? (
+              <div className="rounded-lg border border-success/30 bg-success/10 p-4 text-sm">
+                <p className="flex items-center gap-2 font-semibold text-success">
+                  <CheckCircle2 className="size-4" aria-hidden /> Emissão simulada
+                </p>
+                <p className="mt-2 font-mono text-xs text-foreground">
+                  token {emitida.token} · hash {emitida.hash}
+                </p>
+                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                  Gravado só no seu navegador: este protótipo não tem contrato em rede. Numa emissão
+                  real, o token passaria a aparecer na ficha pública da instituição.
+                </p>
+              </div>
+            ) : (
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setAberto(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  disabled={!modelo || !nivel}
+                  onClick={() => {
+                    if (!modelo) return;
+                    const feita = atribuir({
+                      modeloId: modelo.id,
+                      instituicaoId: inst.id,
+                      notas,
+                      subselos: inst.subselos.filter((s) => modelo.subselosElegiveis.includes(s)),
+                      avaliador: inst.avaliador ?? "Não informado",
+                      responsavel: "Ana Ribeiro",
+                      observacoes: "",
+                    });
+                    if (feita) setEmitida({ token: feita.token, hash: feita.hash });
+                  }}
+                >
+                  <ShieldCheck className="size-4" aria-hidden /> Registrar na blockchain
+                </Button>
+              </DialogFooter>
+            )}
+          </>
         )}
       </DialogContent>
     </Dialog>
@@ -291,11 +401,14 @@ function DialogoDeEmissao({ inst }: { inst: Institution }) {
 }
 
 function CertificacoesDoEscopo({ escopo }: { escopo: Escopo }) {
+  const { emissoes } = useCatalogo();
   const ehAdmin = escopo.papel === "admin";
   const lista = escopo.instituicoes;
   const resumo = resumoDoConjunto(lista);
   const comSelo = lista.filter((i) => i.nivel !== null);
-  const filaDeEmissao = lista.filter((i) => i.status === "Em avaliação");
+  // Quem já recebeu emissão nesta sessão sai da fila: a decisão foi tomada.
+  const jaEmitidas = new Set(emissoes.map((e) => e.instituicaoId));
+  const filaDeEmissao = lista.filter((i) => i.status === "Em avaliação" && !jaEmitidas.has(i.id));
 
   return (
     <div className="space-y-6">
@@ -334,6 +447,13 @@ function CertificacoesDoEscopo({ escopo }: { escopo: Escopo }) {
         <Painel
           titulo="Aguardando emissão"
           descricao="Avaliações concluídas cuja decisão de selo ainda está com a equipe SIS."
+          acoes={
+            <Button asChild size="sm" variant="outline">
+              <Link to="/portal/modelos">
+                <FileStack className="size-4" aria-hidden /> Modelos de selo
+              </Link>
+            </Button>
+          }
         >
           {filaDeEmissao.length === 0 ? (
             <Vazio>Nenhuma emissão pendente.</Vazio>

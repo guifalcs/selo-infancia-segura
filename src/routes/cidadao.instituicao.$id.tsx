@@ -16,7 +16,12 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { SubseloBadge } from "@/components/SubseloBadge";
 import { Seal } from "@/components/Seal";
 import { Button } from "@/components/ui/button";
-import { institutions, registrosDaInstituicao, type RegistroBlockchain } from "@/lib/mock-data";
+import {
+  institutionPorId,
+  institutions,
+  registrosDaInstituicao,
+  type RegistroBlockchain,
+} from "@/lib/mock-data";
 
 export const Route = createFileRoute("/cidadao/instituicao/$id")({
   head: ({ params }) => {
@@ -32,10 +37,12 @@ export const Route = createFileRoute("/cidadao/instituicao/$id")({
       ],
     };
   },
+  /* O loader só valida o id: quem não existe recebe 404 em vez de uma ficha
+     vazia. A instituição em si é buscada no componente, porque o tipo de
+     `useLoaderData` depende da árvore de rotas gerada, que por sua vez importa
+     este arquivo — o ciclo faz o TypeScript desistir e inferir `undefined`. */
   loader: ({ params }) => {
-    const inst = institutions.find((i) => i.id === params.id);
-    if (!inst) throw notFound();
-    return { inst };
+    if (!institutionPorId.has(params.id)) throw notFound();
   },
   component: Ficha,
 });
@@ -57,7 +64,13 @@ const rotuloEvento: Record<RegistroBlockchain["tipo"], string> = {
 };
 
 function Ficha() {
-  const { inst } = Route.useLoaderData();
+  const { id } = Route.useParams();
+  const inst = institutionPorId.get(id);
+
+  // O loader já barrou id inexistente; o guarda existe para o TypeScript, que
+  // não enxerga essa garantia através do roteador.
+  if (!inst) return null;
+
   const historico = registrosDaInstituicao(inst.id);
 
   return (
@@ -210,8 +223,8 @@ function Ficha() {
 
             {historico.length === 0 ? (
               <p className="mt-7 rounded-lg border border-dashed bg-card px-5 py-8 text-center text-sm text-muted-foreground">
-                Nenhum evento registrado ainda: a primeira avaliação desta instituição está
-                agendada e será gravada na cadeia quando ocorrer.
+                Nenhum evento registrado ainda: a primeira avaliação desta instituição está agendada
+                e será gravada na cadeia quando ocorrer.
               </p>
             ) : (
               <ol className="mt-7">

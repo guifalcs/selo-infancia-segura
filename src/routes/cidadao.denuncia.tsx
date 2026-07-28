@@ -67,7 +67,7 @@ const garantias = [
     icon: Scale,
     titulo: "Encaminhamento devido",
     texto:
-      "Denúncias com indício de crime são encaminhadas aos órgãos competentes, e o resultado da apuração também é publicado.",
+      "A gravidade é definida na triagem do SIS, não por você: basta relatar o que viu. Denúncias com indício de crime são encaminhadas aos órgãos competentes, e o resultado da apuração também é publicado.",
   },
 ];
 
@@ -157,9 +157,7 @@ function Denuncia() {
                 <div className="mx-auto grid size-14 place-items-center rounded-full bg-success/10 text-success">
                   <CheckCircle2 className="size-8" aria-hidden />
                 </div>
-                <h2 className="mt-5 text-2xl font-bold text-primary">
-                  Denúncia registrada
-                </h2>
+                <h2 className="mt-5 text-2xl font-bold text-primary">Denúncia registrada</h2>
                 <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">
                   Um registro imutável foi criado na cadeia da instituição. Guarde o protocolo
                   abaixo: é a sua prova de que o apontamento foi feito, e ele não identifica você.
@@ -253,9 +251,7 @@ function Denuncia() {
 
           {/* Garantias. */}
           <aside aria-label="Como sua denúncia é tratada" className="space-y-4">
-            <h2 className="text-lg font-bold text-primary">
-              Como sua denúncia é tratada
-            </h2>
+            <h2 className="text-lg font-bold text-primary">Como sua denúncia é tratada</h2>
             {garantias.map((g) => (
               <div key={g.titulo} className="rounded-lg border bg-card p-5">
                 <g.icon className="size-5 text-brand-teal" aria-hidden />

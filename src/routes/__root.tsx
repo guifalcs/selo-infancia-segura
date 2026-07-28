@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { PortalSessionProvider } from "../lib/portal-session";
+import { CatalogoProvider } from "../lib/certificacoes-store";
 
 function NotFoundComponent() {
   return (
@@ -134,8 +135,12 @@ function RootComponent() {
       {/* A sessão do portal precisa sobreviver à navegação entre rotas, por isso
           o provider fica no shell e não dentro de cada página. */}
       <PortalSessionProvider>
-        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-        <Outlet />
+        {/* O catálogo de modelos também precisa sobreviver à navegação: um modelo
+            criado em /portal/modelos aparece na emissão em /portal/certificacoes. */}
+        <CatalogoProvider>
+          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+          <Outlet />
+        </CatalogoProvider>
       </PortalSessionProvider>
     </QueryClientProvider>
   );

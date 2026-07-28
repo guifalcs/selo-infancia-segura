@@ -440,19 +440,25 @@ function PainelDaRede({ escopo }: { escopo: Escopo }) {
           ) : (
             <ul className="divide-y">
               {abertas.map((d) => (
-                <li key={d.protocolo} className="px-5 py-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-xs text-muted-foreground">{d.protocolo}</span>
-                    <Badge variant={d.status === "Recebida" ? "outline" : "default"}>
-                      {d.status}
-                    </Badge>
-                  </div>
-                  <p className="mt-1 text-sm font-semibold">
-                    {institutionPorId.get(d.instituicaoId)?.nome}
-                  </p>
-                  <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                    {d.categoria} · {d.eixo}
-                  </p>
+                <li key={d.protocolo}>
+                  <Link
+                    to="/portal/denuncias/$protocolo"
+                    params={{ protocolo: d.protocolo }}
+                    className="block px-5 py-4 transition-colors hover:bg-muted/50"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono text-xs text-muted-foreground">{d.protocolo}</span>
+                      <Badge variant={d.status === "Recebida" ? "outline" : "default"}>
+                        {d.status}
+                      </Badge>
+                    </div>
+                    <p className="mt-1 text-sm font-semibold">
+                      {institutionPorId.get(d.instituicaoId)?.nome}
+                    </p>
+                    <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                      {d.categoria} · {d.eixo}
+                    </p>
+                  </Link>
                 </li>
               ))}
             </ul>

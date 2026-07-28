@@ -166,10 +166,16 @@ function Conteudo({ escopo }: { escopo: Escopo }) {
         >
           <ul className="divide-y">
             {denunciasProcedentes.map((d) => (
-              <li key={d.protocolo} className="px-5 py-4">
-                <p className="font-mono text-xs text-muted-foreground">{d.protocolo}</p>
-                <p className="mt-1 text-sm font-semibold">{d.categoria}</p>
-                <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{d.resumo}</p>
+              <li key={d.protocolo}>
+                <Link
+                  to="/portal/denuncias/$protocolo"
+                  params={{ protocolo: d.protocolo }}
+                  className="block px-5 py-4 transition-colors hover:bg-muted/50"
+                >
+                  <p className="font-mono text-xs text-muted-foreground">{d.protocolo}</p>
+                  <p className="mt-1 text-sm font-semibold">{d.categoria}</p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{d.resumo}</p>
+                </Link>
               </li>
             ))}
           </ul>

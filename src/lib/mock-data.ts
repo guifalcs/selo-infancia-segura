@@ -26,6 +26,17 @@ export type TipoInstituicao =
   | "Projeto social"
   | "Curso livre";
 
+/** Os mesmos tipos em runtime — o formulário de modelo precisa iterar sobre eles. */
+export const tiposDeInstituicao = [
+  "Escola",
+  "Creche",
+  "Clínica",
+  "Clube esportivo",
+  "Parque de diversões",
+  "Projeto social",
+  "Curso livre",
+] as const satisfies readonly TipoInstituicao[];
+
 /** Um critério avaliado, com a norma que o fundamenta. */
 export type Criterio = {
   nome: string;
@@ -541,6 +552,239 @@ export const certificacoes: Certificacao[] = institutions
 export const certificacaoDaInstituicao = (instituicaoId: string) =>
   certificacoes.find((c) => c.instituicaoId === instituicaoId) ?? null;
 
+/* ---------------------------------------------------------------------------
+ * Modelos de certificação.
+ *
+ * Um modelo é a definição do selo — o que ele exige, como se pontua, quanto
+ * vale e por quanto tempo. A instituição não "cria" uma certificação: ela é
+ * avaliada contra um modelo já publicado pela equipe SIS e, se atinge o corte,
+ * recebe uma emissão daquele modelo. A analogia é a de um curso: a instituição
+ * de ensino define o diploma uma vez, e cada aprovado recebe o mesmo diploma
+ * com os seus próprios dados.
+ *
+ * Separar as duas coisas é o que permite mudar a régua sem reescrever o
+ * passado: alterar um modelo não altera as emissões já registradas na rede,
+ * porque cada emissão guarda o modelo e a versão sob os quais foi feita.
+ * ------------------------------------------------------------------------ */
+
+export type StatusModelo = "Ativo" | "Rascunho" | "Arquivado";
+
+/** Peso de um eixo dentro do modelo. A soma dos pesos é sempre 100. */
+export type EixoDoModelo = { nome: string; base: string; peso: number };
+
+/** Nota mínima para alcançar um nível. Guardadas do maior para o menor. */
+export type FaixaDeNivel = { nivel: Nivel; minimo: number };
+
+export type ModeloCertificacao = {
+  id: string;
+  nome: string;
+  /** Sigla que compõe o token emitido na rede: `SIS-EB-2026-0001`. */
+  codigo: string;
+  descricao: string;
+  /** Tipos de instituição que podem ser avaliados por este modelo. */
+  tiposElegiveis: TipoInstituicao[];
+  eixos: EixoDoModelo[];
+  /** Corte de aprovação: abaixo disso não há emissão, só plano de adequação. */
+  notaMinima: number;
+  faixas: FaixaDeNivel[];
+  validadeMeses: number;
+  /** Evidências que o avaliador precisa anexar para fechar a avaliação. */
+  requisitos: string[];
+  /** Subselos temáticos que este modelo pode conceder. */
+  subselosElegiveis: string[];
+  status: StatusModelo;
+  criadoEm: string;
+  criadoPor: string;
+  /** Versão do texto do modelo. Editar um modelo publicado incrementa aqui. */
+  versao: number;
+};
+
+/** Pesos iguais para os seis eixos padrão — ponto de partida de um modelo novo. */
+export const eixosComPesoIgual = (): EixoDoModelo[] =>
+  eixos.map((e, i) => ({
+    nome: e.nome,
+    base: e.base,
+    // 100 não divide por 6: o resto vai para o primeiro eixo, para a soma fechar.
+    peso: i === 0 ? 100 - 17 * (eixos.length - 1) : 17,
+  }));
+
+/** Faixas padrão, alinhadas à descrição pública dos níveis. */
+export const faixasPadrao = (): FaixaDeNivel[] => [
+  { nivel: "Ouro", minimo: 90 },
+  { nivel: "Prata", minimo: 75 },
+  { nivel: "Bronze", minimo: 60 },
+];
+
+/** Nível correspondente a uma nota dentro de um modelo. `null` = reprovado. */
+export const nivelPorFaixa = (modelo: ModeloCertificacao, nota: number): Nivel | null => {
+  if (nota < modelo.notaMinima) return null;
+  const faixa = [...modelo.faixas]
+    .sort((a, b) => b.minimo - a.minimo)
+    .find((f) => nota >= f.minimo);
+  return faixa?.nivel ?? null;
+};
+
+/** Média ponderada das notas por eixo, conforme os pesos do modelo. */
+export const notaPonderada = (modelo: ModeloCertificacao, notas: Record<string, number>) => {
+  const soma = modelo.eixos.reduce((s, e) => s + e.peso, 0) || 1;
+  const total = modelo.eixos.reduce((s, e) => s + (notas[e.nome] ?? 0) * e.peso, 0);
+  return Math.round(total / soma);
+};
+
+/**
+ * Data brasileira somada de N meses — usada para calcular a validade.
+ *
+ * O dia é limitado ao último dia do mês de destino: sem isso, um selo emitido
+ * em 31/01 venceria em 03/03, porque a data transborda para o mês seguinte. A
+ * validade de um selo não pode pular de mês por acidente de calendário.
+ */
+export const somarMeses = (data: string, meses: number) => {
+  const [d, m, a] = data.split("/").map(Number);
+  if (!a) return data;
+  const ultimoDia = new Date(a, m + meses, 0).getDate();
+  const dt = new Date(a, m - 1 + meses, Math.min(d, ultimoDia));
+  return `${String(dt.getDate()).padStart(2, "0")}/${String(dt.getMonth() + 1).padStart(2, "0")}/${dt.getFullYear()}`;
+};
+
+/**
+ * Modelos publicados pela equipe SIS.
+ *
+ * Três modelos cobrem os tipos de ambiente atendidos hoje. Os pesos mudam entre
+ * eles de propósito: numa creche o ambiente físico pesa mais que o canal de
+ * escuta, enquanto num curso livre online a proteção de dados é o eixo crítico.
+ */
+export const modelosIniciais: ModeloCertificacao[] = [
+  {
+    id: "mod-eb",
+    nome: "Selo Infância Segura · Educação Básica",
+    codigo: "SIS-EB",
+    descricao:
+      "Modelo para escolas, creches e cursos livres presenciais que recebem crianças e adolescentes em rotina diária.",
+    tiposElegiveis: ["Escola", "Creche", "Curso livre"],
+    eixos: [
+      { nome: "Ambiente seguro e saudável", base: "ECA · Vigilância Sanitária", peso: 20 },
+      { nome: "Segurança predial e prevenção", base: "Corpo de Bombeiros", peso: 20 },
+      { nome: "Acessibilidade e inclusão", base: "LBI · Recomendações UNICEF", peso: 15 },
+      { nome: "Qualificação dos profissionais", base: "ECA · Conselhos de classe", peso: 20 },
+      { nome: "Proteção de dados de menores", base: "LGPD", peso: 10 },
+      { nome: "Canais de escuta e denúncia", base: "ECA · Conselho Tutelar", peso: 15 },
+    ],
+    notaMinima: 60,
+    faixas: faixasPadrao(),
+    validadeMeses: 12,
+    requisitos: [
+      "Auto de Vistoria do Corpo de Bombeiros vigente",
+      "Alvará sanitário da unidade",
+      "Certidões negativas criminais de toda a equipe com contato direto",
+      "Política de proteção à criança publicada e assinada pela direção",
+      "Registro do canal de escuta e do fluxo de encaminhamento ao conselho tutelar",
+    ],
+    subselosElegiveis: [
+      "Acessibilidade",
+      "Inclusão TEA",
+      "Prevenção ao Bullying",
+      "Segurança Digital",
+    ],
+    status: "Ativo",
+    criadoEm: "10/01/2026",
+    criadoPor: "Ana Ribeiro",
+    versao: 3,
+  },
+  {
+    id: "mod-st",
+    nome: "Selo Infância Segura · Saúde e Terapias",
+    codigo: "SIS-ST",
+    descricao:
+      "Modelo para clínicas pediátricas e serviços de terapia infantil, com ênfase em prontuário, sigilo e supervisão profissional.",
+    tiposElegiveis: ["Clínica"],
+    eixos: [
+      { nome: "Ambiente seguro e saudável", base: "ECA · Vigilância Sanitária", peso: 20 },
+      { nome: "Segurança predial e prevenção", base: "Corpo de Bombeiros", peso: 10 },
+      { nome: "Acessibilidade e inclusão", base: "LBI · Recomendações UNICEF", peso: 20 },
+      { nome: "Qualificação dos profissionais", base: "ECA · Conselhos de classe", peso: 25 },
+      { nome: "Proteção de dados de menores", base: "LGPD", peso: 15 },
+      { nome: "Canais de escuta e denúncia", base: "ECA · Conselho Tutelar", peso: 10 },
+    ],
+    notaMinima: 65,
+    faixas: faixasPadrao(),
+    validadeMeses: 12,
+    requisitos: [
+      "Registro ativo do serviço no conselho de classe correspondente",
+      "Política de sigilo e guarda de prontuário de paciente menor de idade",
+      "Protocolo de atendimento com responsável presente ou autorização formal",
+      "Certidões negativas criminais da equipe assistencial",
+    ],
+    subselosElegiveis: ["Acessibilidade", "Inclusão TEA", "Segurança Digital"],
+    status: "Ativo",
+    criadoEm: "18/02/2026",
+    criadoPor: "Ana Ribeiro",
+    versao: 2,
+  },
+  {
+    id: "mod-el",
+    nome: "Selo Infância Segura · Esporte, Lazer e Projetos",
+    codigo: "SIS-EL",
+    descricao:
+      "Modelo para clubes, parques e projetos sociais, onde a rotação de público e a supervisão de atividades de risco são os pontos críticos.",
+    tiposElegiveis: ["Clube esportivo", "Parque de diversões", "Projeto social"],
+    eixos: [
+      { nome: "Ambiente seguro e saudável", base: "ECA · Vigilância Sanitária", peso: 15 },
+      { nome: "Segurança predial e prevenção", base: "Corpo de Bombeiros", peso: 30 },
+      { nome: "Acessibilidade e inclusão", base: "LBI · Recomendações UNICEF", peso: 15 },
+      { nome: "Qualificação dos profissionais", base: "ECA · Conselhos de classe", peso: 25 },
+      { nome: "Proteção de dados de menores", base: "LGPD", peso: 5 },
+      { nome: "Canais de escuta e denúncia", base: "ECA · Conselho Tutelar", peso: 10 },
+    ],
+    notaMinima: 60,
+    faixas: faixasPadrao(),
+    validadeMeses: 12,
+    requisitos: [
+      "Laudo estrutural dos equipamentos de recreação, quando houver",
+      "Plano de emergência e equipe treinada em primeiros socorros por turno",
+      "Relação nominal de monitores com formação e certidões negativas",
+      "Controle de entrada e saída com identificação do responsável",
+    ],
+    subselosElegiveis: ["Acessibilidade", "Inclusão TEA", "Prevenção ao Bullying"],
+    status: "Ativo",
+    criadoEm: "05/03/2026",
+    criadoPor: "Ana Ribeiro",
+    versao: 1,
+  },
+  {
+    id: "mod-ead",
+    nome: "Selo Infância Segura · Ambientes Digitais",
+    codigo: "SIS-AD",
+    descricao:
+      "Rascunho em construção para cursos e plataformas online voltadas a menores de idade. Ainda não publicado: aguarda parecer jurídico sobre LGPD e consentimento parental.",
+    tiposElegiveis: ["Curso livre"],
+    eixos: [
+      { nome: "Ambiente seguro e saudável", base: "ECA · Vigilância Sanitária", peso: 5 },
+      { nome: "Segurança predial e prevenção", base: "Corpo de Bombeiros", peso: 5 },
+      { nome: "Acessibilidade e inclusão", base: "LBI · Recomendações UNICEF", peso: 20 },
+      { nome: "Qualificação dos profissionais", base: "ECA · Conselhos de classe", peso: 15 },
+      { nome: "Proteção de dados de menores", base: "LGPD", peso: 40 },
+      { nome: "Canais de escuta e denúncia", base: "ECA · Conselho Tutelar", peso: 15 },
+    ],
+    notaMinima: 70,
+    faixas: faixasPadrao(),
+    validadeMeses: 12,
+    requisitos: [
+      "Termo de consentimento parental específico por funcionalidade",
+      "Relatório de impacto à proteção de dados (RIPD)",
+      "Moderação de interação entre usuários com registro auditável",
+    ],
+    subselosElegiveis: ["Segurança Digital", "Acessibilidade"],
+    status: "Rascunho",
+    criadoEm: "12/07/2026",
+    criadoPor: "Ana Ribeiro",
+    versao: 1,
+  },
+];
+
+/** Modelo aplicável a um tipo de instituição — só entre os publicados. */
+export const modelosParaTipo = (lista: ModeloCertificacao[], tipo: TipoInstituicao) =>
+  lista.filter((m) => m.status === "Ativo" && m.tiposElegiveis.includes(tipo));
+
 export type StatusAvaliacao = "Aprovada" | "Em andamento" | "Agendada" | "Reprovada";
 
 export type Avaliacao = {
@@ -629,6 +873,64 @@ export const avaliacoesDaInstituicao = (instituicaoId: string) =>
 
 export type StatusDenuncia = "Recebida" | "Em apuração" | "Procedente" | "Improcedente";
 
+/** Gravidade atribuída na triagem — define prazo e prioridade da apuração. */
+export type GravidadeDenuncia = "Alta" | "Média" | "Baixa";
+
+/**
+ * Natureza escolhida por quem registra — mesma lista fechada do canal público.
+ *
+ * É o único juízo pedido ao denunciante, e ainda assim de fato, não de risco:
+ * ele descreve o que viu, não o quanto é grave.
+ */
+export type NaturezaDenuncia =
+  | "Segurança física do ambiente"
+  | "Suspeita de maus-tratos ou negligência"
+  | "Conduta ou qualificação de profissionais"
+  | "Falta de acessibilidade ou exclusão"
+  | "Higiene, alimentação ou salubridade"
+  | "Uso indevido de dados ou imagem de menores"
+  | "Outra irregularidade";
+
+/**
+ * Piso de gravidade por natureza do relato.
+ *
+ * Quem denuncia nunca classifica a própria denúncia: a gravidade sai da
+ * triagem do SIS. O piso abaixo é a parte automática dessa triagem — decorre
+ * da natureza informada, sem depender de leitura. Maus-tratos e falha de
+ * segurança física entram como alta porque envolvem notificação obrigatória
+ * (ECA, art. 13) e risco imediato.
+ *
+ * A leitura do relato pode SUBIR o nível (atividade de risco, reincidência,
+ * menção a lesão). Baixar abaixo do piso exige justificativa, que é registrada
+ * na etapa de triagem e vai para a cadeia junto com ela. `null` = natureza sem
+ * piso: o nível depende inteiramente da leitura.
+ */
+export const pisoDeGravidade: Record<NaturezaDenuncia, GravidadeDenuncia | null> = {
+  "Suspeita de maus-tratos ou negligência": "Alta",
+  "Segurança física do ambiente": "Alta",
+  "Conduta ou qualificação de profissionais": "Média",
+  "Higiene, alimentação ou salubridade": "Média",
+  "Falta de acessibilidade ou exclusão": "Média",
+  "Uso indevido de dados ou imagem de menores": "Média",
+  "Outra irregularidade": null,
+};
+
+const ordemDaGravidade: Record<GravidadeDenuncia, number> = { Baixa: 1, Média: 2, Alta: 3 };
+
+/**
+ * Etapa da apuração.
+ *
+ * Cada etapa vira um evento na cadeia: é o que permite à instituição
+ * acompanhar o andamento sem depender da palavra de quem apura.
+ */
+export type EtapaDenuncia = {
+  data: string;
+  titulo: string;
+  detalhe: string;
+  /** Quem executou a etapa — equipe SIS, avaliador credenciado ou a rede. */
+  responsavel: string;
+};
+
 export type Denuncia = {
   protocolo: string;
   instituicaoId: string;
@@ -636,16 +938,34 @@ export type Denuncia = {
   /** Eixo afetado — permite ligar a denúncia ao critério que ela questiona. */
   eixo: string;
   categoria: string;
-  canal: "Anônimo" | "Identificado";
+  /** Natureza marcada por quem registrou, no formulário do canal público. */
+  natureza: NaturezaDenuncia;
   status: StatusDenuncia;
+  /** Nula até a triagem acontecer: antes disso o caso ainda não tem nível. */
+  gravidade: GravidadeDenuncia | null;
+  /** Uma linha para a fila. */
   resumo: string;
+  /** Texto integral do relato, como chegou pelo canal público. */
+  relato: string;
+  /** Quem responde pela apuração. */
+  responsavel: string;
+  /** Prazo para concluir a apuração. */
+  prazo: string;
+  andamento: EtapaDenuncia[];
+  /** Providências determinadas até aqui. Vazio enquanto a triagem não termina. */
+  providencias: string[];
+  /** Conclusão da apuração — nulo enquanto o caso está em aberto. */
+  desfecho: string | null;
+  /** Efeito sobre a certificação, que é o que a instituição quer saber. */
+  impactoNoSelo: string;
 };
 
 /**
  * Denúncias registradas pelo canal público.
  *
- * O canal é anônimo por padrão, então o portal nunca expõe autor: a unidade vê
- * o teor e o prazo, não quem escreveu. Só a equipe SIS enxerga a fila completa.
+ * O portal mostra o teor, o andamento e o efeito sobre o selo. A autoria fica
+ * fora da base: não é um campo escondido na interface, é dado que o canal não
+ * guarda.
  */
 export const denuncias: Denuncia[] = [
   {
@@ -654,10 +974,51 @@ export const denuncias: Denuncia[] = [
     data: "18/05/2026",
     eixo: "Canais de escuta e denúncia",
     categoria: "Demora no atendimento de ocorrência",
-    canal: "Anônimo",
+    natureza: "Outra irregularidade",
     status: "Improcedente",
+    gravidade: "Média",
     resumo:
       "Relato de demora no retorno sobre ocorrência entre alunos. Apurado com registro de protocolo interno cumprido no prazo.",
+    relato:
+      "Uma ocorrência entre alunos do 6º ano teria sido comunicada à coordenação e ficado três semanas sem retorno às famílias envolvidas. O relato aponta que a escola só teria se manifestado depois de nova cobrança.",
+    responsavel: "Larissa Souza · SIS-AV-0044",
+    prazo: "17/06/2026",
+    andamento: [
+      {
+        data: "18/05/2026",
+        titulo: "Relato recebido pelo canal público",
+        detalhe: "Protocolo gerado e gravado na cadeia da instituição.",
+        responsavel: "Canal público SIS",
+      },
+      {
+        data: "20/05/2026",
+        titulo: "Triagem concluída · gravidade média",
+        detalhe:
+          "Classificado no eixo Canais de escuta e denúncia, com prazo de apuração de 30 dias.",
+        responsavel: "Coordenação de certificação SIS",
+      },
+      {
+        data: "28/05/2026",
+        titulo: "Documentação solicitada à instituição",
+        detalhe:
+          "Livro de ocorrências e comprovantes de comunicação às famílias no período foram requisitados.",
+        responsavel: "Larissa Souza · SIS-AV-0044",
+      },
+      {
+        data: "05/06/2026",
+        titulo: "Apuração concluída · improcedente",
+        detalhe:
+          "Registros mostram atendimento em 48 horas e duas comunicações às famílias, ambas datadas.",
+        responsavel: "Coordenação de certificação SIS",
+      },
+    ],
+    providencias: [
+      "Nenhuma medida aplicada à instituição.",
+      "Evento mantido no histórico permanente, inclusive por ter sido considerado improcedente.",
+    ],
+    desfecho:
+      "Improcedente. O protocolo interno foi cumprido dentro do prazo previsto e a comunicação às famílias está documentada.",
+    impactoNoSelo: "Sem efeito sobre a certificação vigente.",
   },
   {
     protocolo: "DEN-2026-0187",
@@ -665,10 +1026,51 @@ export const denuncias: Denuncia[] = [
     data: "02/06/2026",
     eixo: "Segurança predial e prevenção",
     categoria: "Infraestrutura",
-    canal: "Anônimo",
+    natureza: "Segurança física do ambiente",
     status: "Procedente",
+    gravidade: "Alta",
     resumo:
       "Portão de acesso sem trava funcional no contraturno. Adequação incluída no plano da secretaria com prazo de 60 dias.",
+    relato:
+      "O portão principal permaneceria destravado durante as atividades do contraturno, com entrada e saída sem controle de quem circula pelo pátio. O relato menciona que a trava está quebrada há meses.",
+    responsavel: "Márcia Torres · SIS-AV-0031",
+    prazo: "02/07/2026",
+    andamento: [
+      {
+        data: "02/06/2026",
+        titulo: "Relato recebido pelo canal público",
+        detalhe: "Protocolo gerado e gravado na cadeia da instituição.",
+        responsavel: "Canal público SIS",
+      },
+      {
+        data: "03/06/2026",
+        titulo: "Triagem concluída · gravidade alta",
+        detalhe: "Risco de acesso não controlado a área com crianças. Apuração priorizada.",
+        responsavel: "Coordenação de certificação SIS",
+      },
+      {
+        data: "10/06/2026",
+        titulo: "Vistoria presencial realizada",
+        detalhe:
+          "Trava eletrônica inoperante confirmada; controle de entrada feito apenas por funcionário no horário parcial.",
+        responsavel: "Márcia Torres · SIS-AV-0031",
+      },
+      {
+        data: "18/06/2026",
+        titulo: "Apuração concluída · procedente",
+        detalhe:
+          "Adequação determinada e incluída no plano da secretaria, com reavaliação do eixo na próxima visita.",
+        responsavel: "Coordenação de certificação SIS",
+      },
+    ],
+    providencias: [
+      "Substituição da trava do portão de acesso, com prazo de 60 dias.",
+      "Registro de entrada e saída no contraturno até a conclusão da obra.",
+      "Reavaliação do eixo Segurança predial e prevenção na próxima visita.",
+    ],
+    desfecho:
+      "Procedente. A falha foi confirmada em vistoria e virou item prioritário do plano de adequação da rede.",
+    impactoNoSelo: "Selo mantido sob plano de adequação com prazo de 60 dias.",
   },
   {
     protocolo: "DEN-2026-0203",
@@ -676,10 +1078,42 @@ export const denuncias: Denuncia[] = [
     data: "21/06/2026",
     eixo: "Qualificação dos profissionais",
     categoria: "Supervisão de atividades",
-    canal: "Identificado",
+    natureza: "Conduta ou qualificação de profissionais",
     status: "Em apuração",
+    gravidade: "Alta",
     resumo:
       "Relato de turma de natação sem segundo profissional na borda. Avaliação extraordinária aberta.",
+    relato:
+      "Turmas de natação da faixa de 6 a 9 anos estariam sendo conduzidas por um único professor, sem segundo profissional na borda, contrariando a escala apresentada na avaliação inicial.",
+    responsavel: "Rafael Prado · SIS-AV-0063",
+    prazo: "21/07/2026",
+    andamento: [
+      {
+        data: "21/06/2026",
+        titulo: "Relato recebido pelo canal público",
+        detalhe: "Protocolo gerado e gravado na cadeia da instituição.",
+        responsavel: "Canal público SIS",
+      },
+      {
+        data: "22/06/2026",
+        titulo: "Triagem concluída · gravidade alta",
+        detalhe: "Risco de afogamento em atividade aquática. Apuração priorizada.",
+        responsavel: "Coordenação de certificação SIS",
+      },
+      {
+        data: "30/06/2026",
+        titulo: "Avaliação extraordinária aberta",
+        detalhe:
+          "Visita presencial agendada para 15/07/2026, sem aviso do horário exato à unidade.",
+        responsavel: "Rafael Prado · SIS-AV-0063",
+      },
+    ],
+    providencias: [
+      "Escala de profissionais das turmas de natação requisitada ao clube.",
+      "Avaliação extraordinária aberta, com visita presencial em 15/07/2026.",
+    ],
+    desfecho: null,
+    impactoNoSelo: "Selo em análise: a avaliação extraordinária pode alterar a nota do eixo.",
   },
   {
     protocolo: "DEN-2026-0211",
@@ -687,10 +1121,42 @@ export const denuncias: Denuncia[] = [
     data: "26/06/2026",
     eixo: "Ambiente seguro e saudável",
     categoria: "Alimentação",
-    canal: "Anônimo",
+    natureza: "Higiene, alimentação ou salubridade",
     status: "Em apuração",
+    gravidade: "Média",
     resumo:
       "Questionamento sobre armazenamento de alimentos na cozinha. Vistoria conjunta com a vigilância sanitária agendada.",
+    relato:
+      "Alimentos perecíveis estariam sendo mantidos fora da câmara fria por longos períodos durante o preparo do almoço, com a porta do equipamento aberta boa parte da manhã.",
+    responsavel: "Camila Nunes · SIS-AV-0058",
+    prazo: "26/07/2026",
+    andamento: [
+      {
+        data: "26/06/2026",
+        titulo: "Relato recebido pelo canal público",
+        detalhe: "Protocolo gerado e gravado na cadeia da instituição.",
+        responsavel: "Canal público SIS",
+      },
+      {
+        data: "27/06/2026",
+        titulo: "Triagem concluída · gravidade média",
+        detalhe: "Classificado no eixo Ambiente seguro e saudável, com prazo de 30 dias.",
+        responsavel: "Coordenação de certificação SIS",
+      },
+      {
+        data: "08/07/2026",
+        titulo: "Vistoria conjunta agendada",
+        detalhe:
+          "Inspeção com a vigilância sanitária municipal marcada para 18/07/2026, com foco na cadeia de frio.",
+        responsavel: "Camila Nunes · SIS-AV-0058",
+      },
+    ],
+    providencias: [
+      "Registros de temperatura da câmara fria solicitados à creche.",
+      "Vistoria conjunta com a vigilância sanitária em 18/07/2026.",
+    ],
+    desfecho: null,
+    impactoNoSelo: "Nenhuma alteração no selo até a conclusão da vistoria.",
   },
   {
     protocolo: "DEN-2026-0230",
@@ -698,10 +1164,33 @@ export const denuncias: Denuncia[] = [
     data: "01/07/2026",
     eixo: "Proteção de dados de menores",
     categoria: "Uso de imagem",
-    canal: "Anônimo",
+    natureza: "Uso indevido de dados ou imagem de menores",
     status: "Recebida",
+    gravidade: null,
     resumo:
       "Relato de publicação de fotos de turma em rede social sem autorização específica dos responsáveis.",
+    relato:
+      "Fotos de uma turma do 3º ano teriam sido publicadas no perfil da escola com rostos identificáveis, sem que os responsáveis tenham assinado autorização específica para uso de imagem.",
+    responsavel: "Coordenação de certificação SIS",
+    prazo: "31/07/2026",
+    andamento: [
+      {
+        data: "01/07/2026",
+        titulo: "Relato recebido pelo canal público",
+        detalhe: "Protocolo gerado e gravado na cadeia da instituição.",
+        responsavel: "Canal público SIS",
+      },
+      {
+        data: "02/07/2026",
+        titulo: "Encaminhado para triagem",
+        detalhe:
+          "Na fila de classificação de gravidade; avaliador responsável ainda em designação.",
+        responsavel: "Coordenação de certificação SIS",
+      },
+    ],
+    providencias: [],
+    desfecho: null,
+    impactoNoSelo: "Nenhuma medida até a conclusão da triagem.",
   },
   {
     protocolo: "DEN-2026-0244",
@@ -709,10 +1198,42 @@ export const denuncias: Denuncia[] = [
     data: "06/07/2026",
     eixo: "Acessibilidade e inclusão",
     categoria: "Acessibilidade física",
-    canal: "Identificado",
+    natureza: "Falta de acessibilidade ou exclusão",
     status: "Em apuração",
+    gravidade: "Média",
     resumo:
       "Rampa de acesso ao pátio com inclinação acima do previsto na norma. Medição técnica solicitada.",
+    relato:
+      "A rampa que liga o bloco de salas ao pátio teria inclinação acentuada demais para uso autônomo por cadeirante, obrigando alunos a serem carregados por funcionários.",
+    responsavel: "Priscila Marques · SIS-AV-0071",
+    prazo: "05/08/2026",
+    andamento: [
+      {
+        data: "06/07/2026",
+        titulo: "Relato recebido pelo canal público",
+        detalhe: "Protocolo gerado e gravado na cadeia da instituição.",
+        responsavel: "Canal público SIS",
+      },
+      {
+        data: "07/07/2026",
+        titulo: "Triagem concluída · gravidade média",
+        detalhe: "Classificado no eixo Acessibilidade e inclusão, com prazo de 30 dias.",
+        responsavel: "Coordenação de certificação SIS",
+      },
+      {
+        data: "14/07/2026",
+        titulo: "Medição técnica solicitada",
+        detalhe:
+          "Verificação da inclinação conforme a NBR 9050 por profissional de acessibilidade credenciado.",
+        responsavel: "Priscila Marques · SIS-AV-0071",
+      },
+    ],
+    providencias: [
+      "Medição da inclinação da rampa conforme a NBR 9050.",
+      "Laudo de acessibilidade em vigor solicitado à instituição.",
+    ],
+    desfecho: null,
+    impactoNoSelo: "Selo mantido enquanto a medição não é concluída.",
   },
   {
     protocolo: "DEN-2025-0918",
@@ -720,10 +1241,57 @@ export const denuncias: Denuncia[] = [
     data: "09/09/2025",
     eixo: "Canais de escuta e denúncia",
     categoria: "Omissão em ocorrência grave",
-    canal: "Anônimo",
+    natureza: "Suspeita de maus-tratos ou negligência",
     status: "Procedente",
+    gravidade: "Alta",
     resumo:
       "Ausência de encaminhamento de ocorrência ao conselho tutelar. Certificação suspensa após apuração.",
+    relato:
+      "Uma ocorrência grave envolvendo uma aluna teria sido tratada apenas internamente, sem a notificação obrigatória ao conselho tutelar prevista no ECA.",
+    responsavel: "Diego Almeida · SIS-AV-0052",
+    prazo: "09/10/2025",
+    andamento: [
+      {
+        data: "09/09/2025",
+        titulo: "Relato recebido pelo canal público",
+        detalhe: "Protocolo gerado e gravado na cadeia da instituição.",
+        responsavel: "Canal público SIS",
+      },
+      {
+        data: "10/09/2025",
+        titulo: "Triagem concluída · gravidade alta",
+        detalhe:
+          "Prioridade máxima: o relato trata de notificação obrigatória prevista no ECA, art. 13.",
+        responsavel: "Coordenação de certificação SIS",
+      },
+      {
+        data: "16/09/2025",
+        titulo: "Avaliação extraordinária realizada",
+        detalhe:
+          "Visita presencial não localizou registro de encaminhamento ao conselho tutelar no período.",
+        responsavel: "Diego Almeida · SIS-AV-0052",
+      },
+      {
+        data: "25/09/2025",
+        titulo: "Apuração concluída · procedente",
+        detalhe: "Omissão confirmada. Caso comunicado ao conselho tutelar do município.",
+        responsavel: "Coordenação de certificação SIS",
+      },
+      {
+        data: "26/09/2025",
+        titulo: "Certificação suspensa",
+        detalhe: "Suspensão gravada na cadeia; a ficha pública da instituição passou a exibi-la.",
+        responsavel: "Coordenação de certificação SIS",
+      },
+    ],
+    providencias: [
+      "Certificação suspensa até nova avaliação completa.",
+      "Caso comunicado ao conselho tutelar do município.",
+      "Revisão do protocolo interno de notificação como condição para reavaliação.",
+    ],
+    desfecho:
+      "Procedente. A omissão de notificação foi confirmada e levou à suspensão do selo, visível na consulta pública.",
+    impactoNoSelo: "Certificação suspensa em 26/09/2025.",
   },
   {
     protocolo: "DEN-2026-0119",
@@ -731,10 +1299,50 @@ export const denuncias: Denuncia[] = [
     data: "11/05/2026",
     eixo: "Proteção de dados de menores",
     categoria: "Mediação de uso de tecnologia",
-    canal: "Anônimo",
+    natureza: "Uso indevido de dados ou imagem de menores",
     status: "Improcedente",
+    gravidade: "Baixa",
     resumo:
       "Relato sobre acesso irrestrito à internet no laboratório. Verificado filtro de conteúdo ativo e registro de uso.",
+    relato:
+      "O laboratório de informática estaria liberando acesso irrestrito à internet nas aulas livres, sem filtro de conteúdo nem acompanhamento de professor.",
+    responsavel: "Larissa Souza · SIS-AV-0044",
+    prazo: "10/06/2026",
+    andamento: [
+      {
+        data: "11/05/2026",
+        titulo: "Relato recebido pelo canal público",
+        detalhe: "Protocolo gerado e gravado na cadeia da instituição.",
+        responsavel: "Canal público SIS",
+      },
+      {
+        data: "12/05/2026",
+        titulo: "Triagem concluída · gravidade baixa",
+        detalhe:
+          "Rebaixado do piso médio da natureza informada: o relato aponta configuração técnica, sem menção a exposição de criança. Verificação documental, sem visita extraordinária.",
+        responsavel: "Coordenação de certificação SIS",
+      },
+      {
+        data: "21/05/2026",
+        titulo: "Verificação técnica realizada",
+        detalhe:
+          "Filtro de conteúdo ativo, registro de uso por estação e escala de professor responsável confirmados.",
+        responsavel: "Larissa Souza · SIS-AV-0044",
+      },
+      {
+        data: "29/05/2026",
+        titulo: "Apuração concluída · improcedente",
+        detalhe: "Controles previstos no eixo estão em funcionamento. Nenhuma medida aplicada.",
+        responsavel: "Coordenação de certificação SIS",
+      },
+    ],
+    providencias: [
+      "Nenhuma medida aplicada à instituição.",
+      "Evento mantido no histórico permanente da unidade.",
+    ],
+    desfecho:
+      "Improcedente. Os controles de mediação de uso de tecnologia estavam ativos e documentados.",
+    impactoNoSelo: "Sem efeito sobre a certificação vigente.",
   },
   {
     protocolo: "DEN-2026-0251",
@@ -742,15 +1350,66 @@ export const denuncias: Denuncia[] = [
     data: "10/07/2026",
     eixo: "Acessibilidade e inclusão",
     categoria: "Acolhimento de criança com deficiência",
-    canal: "Identificado",
+    natureza: "Falta de acessibilidade ou exclusão",
     status: "Recebida",
+    gravidade: null,
     resumo:
       "Relato de recusa de matrícula por falta de estrutura de acolhimento. Encaminhado para apuração pela rede gestora.",
+    relato:
+      "Uma família teria sido orientada a procurar outra unidade porque a creche não teria estrutura para acolher uma criança com deficiência, sem que a recusa fosse formalizada por escrito.",
+    responsavel: "Coordenação de certificação SIS",
+    prazo: "09/08/2026",
+    andamento: [
+      {
+        data: "10/07/2026",
+        titulo: "Relato recebido pelo canal público",
+        detalhe: "Protocolo gerado e gravado na cadeia da instituição.",
+        responsavel: "Canal público SIS",
+      },
+      {
+        data: "11/07/2026",
+        titulo: "Encaminhado à rede gestora",
+        detalhe:
+          "Apuração conjunta com a rede, que responde pela política de matrícula das unidades.",
+        responsavel: "Coordenação de certificação SIS",
+      },
+    ],
+    providencias: [
+      "Apuração conjunta com a rede gestora, que responde pela política de matrícula.",
+    ],
+    desfecho: null,
+    impactoNoSelo: "Nenhuma medida até a conclusão da triagem.",
   },
 ];
 
 export const denunciasDaInstituicao = (instituicaoId: string) =>
   denuncias.filter((d) => d.instituicaoId === instituicaoId);
+
+export const denunciaPorProtocolo = new Map(denuncias.map((d) => [d.protocolo, d]));
+
+/**
+ * Como aquele nível de gravidade foi parar ali.
+ *
+ * A pergunta aparece sempre que alguém olha a fila: quem denuncia não
+ * classifica nada, então a tela precisa dizer de onde veio o número — piso
+ * automático da natureza, elevação por leitura do relato ou rebaixamento com
+ * justificativa.
+ */
+export function origemDaGravidade(d: Denuncia) {
+  const piso = pisoDeGravidade[d.natureza];
+
+  if (d.gravidade === null) {
+    return piso
+      ? `Aguardando triagem · a natureza informada garante piso de gravidade ${piso.toLowerCase()}`
+      : "Aguardando triagem · a natureza informada não define piso automático";
+  }
+  if (!piso) return "Definida na triagem, pela leitura do relato: esta natureza não tem piso";
+  if (ordemDaGravidade[d.gravidade] > ordemDaGravidade[piso])
+    return `Elevada na triagem pela leitura do relato · piso da natureza informada: ${piso.toLowerCase()}`;
+  if (ordemDaGravidade[d.gravidade] < ordemDaGravidade[piso])
+    return `Rebaixada na triagem com justificativa registrada · piso da natureza informada: ${piso.toLowerCase()}`;
+  return "Piso automático da natureza informada, confirmado na triagem";
+}
 
 /** Denúncias em aberto — o que ainda demanda ação de alguém. */
 export const denunciaEmAberto = (d: Denuncia) =>
@@ -832,6 +1491,11 @@ export type RegistroBlockchain = {
   hash: string;
   tipo: "certificacao" | "avaliacao" | "denuncia" | "renovacao" | "atualizacao";
   instituicaoId: string;
+  /**
+   * O que o evento registra — mesma chave usada para gerar o hash. Permite ir
+   * da tela do assunto (uma etapa de denúncia, por exemplo) até o bloco.
+   */
+  referencia: string;
 };
 
 const rotuloTipoAvaliacao: Record<Avaliacao["tipo"], RegistroBlockchain["tipo"]> = {
@@ -878,13 +1542,17 @@ export const registros: RegistroBlockchain[] = [
       chave: `sub:${i.id}:${s}`,
     })),
   ),
-  ...denuncias.map((d) => ({
-    evento: `Denúncia ${d.protocolo}: ${d.status.toLowerCase()}`,
-    data: d.data,
-    tipo: "denuncia" as const,
-    instituicaoId: d.instituicaoId,
-    chave: d.protocolo,
-  })),
+  /* Cada etapa da apuração entra na cadeia — é isso que permite à instituição
+     acompanhar o andamento sem depender da palavra de quem apura. */
+  ...denuncias.flatMap((d) =>
+    d.andamento.map((e, i) => ({
+      evento: `Denúncia ${d.protocolo} · ${e.titulo}`,
+      data: e.data,
+      tipo: "denuncia" as const,
+      instituicaoId: d.instituicaoId,
+      chave: `${d.protocolo}:${i}`,
+    })),
+  ),
 ]
   // Ordem cronológica dá o número de bloco; depois invertemos para exibir o
   // mais recente primeiro, sem que o bloco deixe de crescer com o tempo.
@@ -896,11 +1564,22 @@ export const registros: RegistroBlockchain[] = [
     instituicaoId: r.instituicaoId,
     bloco: `#${10321 + idx * 7}`,
     hash: hashDemo(r.chave),
+    referencia: r.chave,
   }))
   .reverse();
 
 export const registrosDaInstituicao = (instituicaoId: string) =>
   registros.filter((r) => r.instituicaoId === instituicaoId);
+
+export const registroPorReferencia = new Map(registros.map((r) => [r.referencia, r]));
+
+/** Bloco que registrou uma etapa específica da apuração de uma denúncia. */
+export const registroDaEtapa = (protocolo: string, indice: number) =>
+  registroPorReferencia.get(`${protocolo}:${indice}`) ?? null;
+
+/** Todos os blocos gerados por uma denúncia, do mais recente ao mais antigo. */
+export const registrosDaDenuncia = (protocolo: string) =>
+  registros.filter((r) => r.referencia.startsWith(`${protocolo}:`));
 
 export type ItemPlano = {
   eixo: string;
