@@ -7,9 +7,9 @@ import { institutions } from "@/lib/mock-data";
 export const Route = createFileRoute("/portal/instituicoes")({
   head: () => ({
     meta: [
-      { title: "Instituições — Portal YC Blockchain" },
-      { name: "description", content: "Tabela de instituições registradas no sistema YC Blockchain." },
-      { property: "og:title", content: "Instituições — Portal YC Blockchain" },
+      { title: "Instituições — Portal SIS" },
+      { name: "description", content: "Tabela de instituições registradas no sistema SIS." },
+      { property: "og:title", content: "Instituições — Portal SIS" },
       { property: "og:description", content: "Consulte todas as instituições cadastradas." },
     ],
   }),

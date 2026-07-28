@@ -8,10 +8,10 @@ import { Label } from "@/components/ui/label";
 export const Route = createFileRoute("/portal/login")({
   head: () => ({
     meta: [
-      { title: "Login Institucional — YC Blockchain" },
-      { name: "description", content: "Acesse o portal institucional YC Blockchain." },
-      { property: "og:title", content: "Login Institucional — YC Blockchain" },
-      { property: "og:description", content: "Portal institucional YC Blockchain." },
+      { title: "Login institucional — SIS" },
+      { name: "description", content: "Acesse o portal institucional do SIS." },
+      { property: "og:title", content: "Login institucional — SIS" },
+      { property: "og:description", content: "Portal institucional do SIS." },
     ],
   }),
   component: Login,
@@ -19,17 +19,19 @@ export const Route = createFileRoute("/portal/login")({
 
 function Login() {
   const nav = useNavigate();
-  const [email, setEmail] = useState("admin@ycblockchain.gov.br");
+  // Domínio fictício e neutro de propósito: usar um `.gov.br` inventado num
+  // projeto sem vínculo com o governo é um risco real de credibilidade.
+  const [email, setEmail] = useState("gestor@demo.selo-infancia-segura.org");
   const [pwd, setPwd] = useState("••••••••");
 
   return (
     <div className="min-h-screen grid md:grid-cols-2">
-      <div className="hidden md:flex flex-col justify-between p-10 bg-gradient-to-br from-primary via-primary to-secondary text-primary-foreground">
+      <div className="hidden md:flex flex-col justify-between p-10 bg-brand-navy-deep text-primary-foreground">
         <Link to="/" className="flex items-center gap-2">
           <div className="size-9 rounded-lg bg-white/15 grid place-items-center">
             <Blocks className="size-5" />
           </div>
-          <span className="font-semibold">YC Blockchain</span>
+          <span className="font-semibold">SIS — Selo Infância Segura</span>
         </Link>
         <div>
           <h2 className="text-3xl font-bold leading-tight">Portal Institucional</h2>
@@ -38,7 +40,7 @@ function Login() {
             segurança e imutabilidade.
           </p>
         </div>
-        <div className="text-xs text-primary-foreground/60">© 2026 YC Blockchain</div>
+        <div className="text-xs text-primary-foreground/60">© 2026 SIS — Selo Infância Segura</div>
       </div>
 
       <div className="flex items-center justify-center p-6 bg-background">

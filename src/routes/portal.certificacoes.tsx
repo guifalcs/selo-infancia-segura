@@ -8,9 +8,9 @@ import { certifications } from "@/lib/mock-data";
 export const Route = createFileRoute("/portal/certificacoes")({
   head: () => ({
     meta: [
-      { title: "Certificações — Portal YC Blockchain" },
-      { name: "description", content: "Certificações emitidas no sistema YC Blockchain." },
-      { property: "og:title", content: "Certificações — Portal YC Blockchain" },
+      { title: "Certificações — Portal SIS" },
+      { name: "description", content: "Certificações emitidas no sistema SIS." },
+      { property: "og:title", content: "Certificações — Portal SIS" },
       { property: "og:description", content: "Todas as certificações emitidas na plataforma." },
     ],
   }),
@@ -30,7 +30,7 @@ export const Route = createFileRoute("/portal/certificacoes")({
               <TableRow key={idx}>
                 <TableCell className="font-medium">{c.instituicao}</TableCell>
                 <TableCell>
-                  <Badge className="bg-secondary/20 text-secondary-foreground border border-secondary gap-1">
+                  <Badge className="bg-success/10 text-success border border-success/30 gap-1">
                     <ShieldCheck className="size-3" /> {c.selo}
                   </Badge>
                 </TableCell>

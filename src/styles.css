@@ -1,3 +1,12 @@
+/*
+ * Tipografia institucional, self-hosted (sem CDN em runtime).
+ * Source Serif 4 nos títulos + Source Sans 3 no corpo — o par clássico de
+ * relatório oficial / fundação, escolhido para afastar a identidade da
+ * estética de SaaS e aproximá-la de um portal público.
+ */
+@import "@fontsource-variable/source-serif-4/index.css";
+@import "@fontsource-variable/source-sans-3/index.css";
+
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
@@ -16,9 +25,42 @@
  * To add a new semantic color:
  * 1. Add the variable to :root (light value) and .dark (dark value)
  * 2. Register it in @theme inline as --color-<name>: var(--<name>)
+ *
+ * ---------------------------------------------------------------------------
+ * PALETA DA MARCA — extraída diretamente da logo "SIS · Selo Infância Segura".
+ * Cada token de marca corresponde a um elemento do símbolo:
+ *
+ *   --brand-navy    #1B3B6F  escudo e "S" inicial   -> cor primária, autoridade
+ *   --brand-teal    #159C9C  "I", criança, doc      -> apoio, institucional
+ *   --brand-green   #5CB335  "S" final, check       -> conformidade / aprovado
+ *   --brand-amber   #F5A623  selo de pessoas        -> acolhimento, humano
+ *   --brand-blue    #1E76D2  selo de cadeado        -> segurança / dados
+ *   --brand-star    #FFC81E  estrela                -> destaque, excelência
+ *
+ * IMPORTANTE: --accent permanece um tom NEUTRO e discreto de propósito.
+ * No shadcn/ui, `accent` é a cor de hover de dropdown, select, sidebar e
+ * command. Trocá-la pelo âmbar da marca deixaria esses estados berrantes.
+ * Para o âmbar da marca, use --brand-amber.
+ * ---------------------------------------------------------------------------
  */
 
 @theme inline {
+  --font-sans: "Source Sans 3 Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Source Serif 4 Variable", ui-serif, Georgia, serif;
+  --color-brand-navy: var(--brand-navy);
+  --color-brand-navy-deep: var(--brand-navy-deep);
+  --color-brand-teal: var(--brand-teal);
+  --color-brand-green: var(--brand-green);
+  --color-brand-amber: var(--brand-amber);
+  --color-brand-blue: var(--brand-blue);
+  --color-brand-star: var(--brand-star);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-seal-bronze: var(--seal-bronze);
+  --color-seal-prata: var(--seal-prata);
+  --color-seal-ouro: var(--seal-ouro);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -62,42 +104,83 @@
 }
 
 :root {
-  --radius: 0.75rem;
-  --background: oklch(0.99 0.005 220);
-  --foreground: oklch(0.2 0.04 240);
+  /* Cantos mais retos: lê como documento institucional, não como app. */
+  --radius: 0.375rem;
+
+  /* Cores literais da logo (ver bloco de comentário acima). */
+  --brand-navy: oklch(0.358 0.098 259.7);
+  --brand-navy-deep: oklch(0.315 0.085 260.2);
+  --brand-teal: oklch(0.629 0.104 194.8);
+  --brand-green: oklch(0.687 0.181 137.7);
+  --brand-amber: oklch(0.784 0.159 73);
+  --brand-blue: oklch(0.565 0.162 253.8);
+  --brand-star: oklch(0.858 0.17 87.8);
+
+  /* Neutros levemente quentes — sensação de papel, não de tela fria. */
+  --background: oklch(0.994 0.003 90);
+  --foreground: oklch(0.24 0.03 260);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.04 240);
+  --card-foreground: oklch(0.24 0.03 260);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2 0.04 240);
-  --primary: oklch(0.5 0.17 250);
-  --primary-foreground: oklch(0.99 0.005 220);
-  --secondary: oklch(0.72 0.15 165);
-  --secondary-foreground: oklch(0.15 0.03 240);
-  --muted: oklch(0.96 0.01 230);
-  --muted-foreground: oklch(0.5 0.03 240);
-  --accent: oklch(0.94 0.04 190);
-  --accent-foreground: oklch(0.2 0.04 240);
-  --destructive: oklch(0.6 0.22 27);
-  --destructive-foreground: oklch(0.99 0.003 247);
-  --border: oklch(0.9 0.02 230);
-  --input: oklch(0.92 0.015 230);
-  --ring: oklch(0.5 0.17 250);
-  --chart-1: oklch(0.5 0.17 250);
-  --chart-2: oklch(0.72 0.15 165);
-  --chart-3: oklch(0.65 0.15 210);
-  --chart-4: oklch(0.75 0.14 140);
-  --chart-5: oklch(0.6 0.17 280);
-  --sidebar: oklch(0.98 0.01 230);
-  --sidebar-foreground: oklch(0.2 0.04 240);
-  --sidebar-primary: oklch(0.5 0.17 250);
-  --sidebar-primary-foreground: oklch(0.99 0.005 220);
-  --sidebar-accent: oklch(0.94 0.04 190);
-  --sidebar-accent-foreground: oklch(0.2 0.04 240);
-  --sidebar-border: oklch(0.9 0.02 230);
-  --sidebar-ring: oklch(0.5 0.17 250);
+  --popover-foreground: oklch(0.24 0.03 260);
+
+  --primary: var(--brand-navy);
+  --primary-foreground: oklch(0.99 0.002 90);
+  --secondary: oklch(0.955 0.012 250);
+  --secondary-foreground: oklch(0.3 0.05 260);
+  --muted: oklch(0.965 0.006 250);
+  --muted-foreground: oklch(0.505 0.023 258);
+  --accent: oklch(0.955 0.014 250);
+  --accent-foreground: oklch(0.3 0.05 260);
+  --destructive: oklch(0.55 0.2 27);
+  --destructive-foreground: oklch(0.99 0.002 90);
+
+  /* Semânticos: verde só significa "conforme", âmbar só significa "atenção". */
+  --success: oklch(0.52 0.13 142);
+  --success-foreground: oklch(0.99 0.002 90);
+  --warning: oklch(0.62 0.13 62);
+  --warning-foreground: oklch(0.99 0.002 90);
+
+  /* Níveis de certificação. */
+  --seal-bronze: oklch(0.57 0.086 55);
+  --seal-prata: oklch(0.62 0.014 255);
+  --seal-ouro: oklch(0.7 0.128 78);
+
+  --border: oklch(0.905 0.008 255);
+  --input: oklch(0.885 0.01 255);
+  --ring: var(--brand-blue);
+  --chart-1: var(--brand-navy);
+  --chart-2: var(--brand-teal);
+  --chart-3: var(--brand-green);
+  --chart-4: var(--brand-amber);
+  --chart-5: var(--brand-blue);
+  --sidebar: oklch(0.985 0.005 250);
+  --sidebar-foreground: oklch(0.24 0.03 260);
+  --sidebar-primary: var(--brand-navy);
+  --sidebar-primary-foreground: oklch(0.99 0.002 90);
+  --sidebar-accent: oklch(0.95 0.014 250);
+  --sidebar-accent-foreground: oklch(0.3 0.05 260);
+  --sidebar-border: oklch(0.905 0.008 255);
+  --sidebar-ring: var(--brand-blue);
 }
 
 .dark {
+  /* A marca clareia no escuro para manter contraste sobre fundo profundo. */
+  --brand-navy: oklch(0.62 0.13 258);
+  --brand-navy-deep: oklch(0.5 0.12 259);
+  --brand-teal: oklch(0.72 0.11 194.8);
+  --brand-green: oklch(0.75 0.17 137.7);
+  --brand-amber: oklch(0.82 0.15 73);
+  --brand-blue: oklch(0.68 0.15 253.8);
+  --brand-star: oklch(0.88 0.16 87.8);
+  --success: oklch(0.72 0.16 142);
+  --success-foreground: oklch(0.16 0.03 260);
+  --warning: oklch(0.78 0.14 62);
+  --warning-foreground: oklch(0.16 0.03 260);
+  --seal-bronze: oklch(0.68 0.09 55);
+  --seal-prata: oklch(0.78 0.014 255);
+  --seal-ouro: oklch(0.82 0.13 82);
+
   --background: oklch(0.129 0.042 264.695);
   --foreground: oklch(0.984 0.003 247.858);
   --card: oklch(0.208 0.042 265.755);
@@ -137,8 +220,45 @@
     border-color: var(--color-border);
   }
 
+  html {
+    scroll-behavior: smooth;
+    /* Compensa o masthead fixo ao navegar por âncora (#como-funciona etc). */
+    scroll-padding-top: 6rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Títulos em serifa: a decisão tipográfica que mais afasta o site da
+     estética de template e o aproxima de publicação institucional. */
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-serif);
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* O projeto é sobre acessibilidade — a navegação por teclado precisa ser
+     visível em todo elemento interativo, não só nos que o shadcn cobre. */
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+    border-radius: 2px;
   }
 }

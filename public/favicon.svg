@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="48 32 104 130"  role="img" aria-label="SIS - Selo Infancia Segura">
+        
+      
+      <path
+        d="M 100 38 L 146 56 L 146 100 C 146 129 126 147 100 156 C 74 147 54 129 54 100 L 54 56 Z"
+        fill="#ffffff"
+        stroke="#16305C"
+        stroke-width="6.5"
+        stroke-linejoin="round"
+      />
+
+      
+      <path
+        d="M 73 120 L 89 139 L 130 96"
+        fill="none"
+        stroke="#5CB335"
+        stroke-width="10"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+
+      
+      <path
+        d="M 100 53 L 103.8 62.2 L 113.7 63 L 106.2 69.5 L 108.5 79.1 L 100 73.9 L 91.5 79.1 L 93.8 69.5 L 86.3 63 L 96.2 62.2 Z"
+        fill="#FFC81E"
+      />
+
+      
+      <g fill="#1B3B6F">
+        <ellipse cx="74.8" cy="96" rx="4.6" ry="6.2" />
+        <circle cx="82.5" cy="92" r="8.4" />
+        <path d="M 75.5 125 L 77 108 Q 78 101 83 101 Q 88 101 89 108 L 90.5 125 Z" />
+        <path d="M 87 106 L 95.5 84 L 99.6 85.7 L 91 107.7 Z" />
+      </g>
+
+      
+      <g fill="#159C9C">
+        <circle cx="117.5" cy="92" r="8.4" />
+        <path d="M 109.5 125 L 111 108 Q 112 101 117 101 Q 122 101 123 108 L 124.5 125 Z" />
+        <path d="M 113 106 L 104.5 84 L 108.6 82.3 L 117 104.3 Z" />
+      </g>
+    
+      </svg>

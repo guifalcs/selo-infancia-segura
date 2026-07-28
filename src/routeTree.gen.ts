@@ -10,14 +10,14 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as PortalRelatoriosRouteImport } from './routes/portal.relatorios'
-import { Route as PortalLoginRouteImport } from './routes/portal.login'
-import { Route as PortalInstituicoesRouteImport } from './routes/portal.instituicoes'
-import { Route as PortalDashboardRouteImport } from './routes/portal.dashboard'
-import { Route as PortalCertificacoesRouteImport } from './routes/portal.certificacoes'
-import { Route as PortalAuditoriasRouteImport } from './routes/portal.auditorias'
-import { Route as CidadaoDenunciaRouteImport } from './routes/cidadao.denuncia'
 import { Route as CidadaoConsultaRouteImport } from './routes/cidadao.consulta'
+import { Route as CidadaoDenunciaRouteImport } from './routes/cidadao.denuncia'
+import { Route as PortalAuditoriasRouteImport } from './routes/portal.auditorias'
+import { Route as PortalCertificacoesRouteImport } from './routes/portal.certificacoes'
+import { Route as PortalDashboardRouteImport } from './routes/portal.dashboard'
+import { Route as PortalInstituicoesRouteImport } from './routes/portal.instituicoes'
+import { Route as PortalLoginRouteImport } from './routes/portal.login'
+import { Route as PortalRelatoriosRouteImport } from './routes/portal.relatorios'
 import { Route as CidadaoInstituicaoIdRouteImport } from './routes/cidadao.instituicao.$id'
 
 const IndexRoute = IndexRouteImport.update({
@@ -25,34 +25,9 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PortalRelatoriosRoute = PortalRelatoriosRouteImport.update({
-  id: '/portal/relatorios',
-  path: '/portal/relatorios',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PortalLoginRoute = PortalLoginRouteImport.update({
-  id: '/portal/login',
-  path: '/portal/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PortalInstituicoesRoute = PortalInstituicoesRouteImport.update({
-  id: '/portal/instituicoes',
-  path: '/portal/instituicoes',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PortalDashboardRoute = PortalDashboardRouteImport.update({
-  id: '/portal/dashboard',
-  path: '/portal/dashboard',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PortalCertificacoesRoute = PortalCertificacoesRouteImport.update({
-  id: '/portal/certificacoes',
-  path: '/portal/certificacoes',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PortalAuditoriasRoute = PortalAuditoriasRouteImport.update({
-  id: '/portal/auditorias',
-  path: '/portal/auditorias',
+const CidadaoConsultaRoute = CidadaoConsultaRouteImport.update({
+  id: '/cidadao/consulta',
+  path: '/cidadao/consulta',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CidadaoDenunciaRoute = CidadaoDenunciaRouteImport.update({
@@ -60,9 +35,34 @@ const CidadaoDenunciaRoute = CidadaoDenunciaRouteImport.update({
   path: '/cidadao/denuncia',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CidadaoConsultaRoute = CidadaoConsultaRouteImport.update({
-  id: '/cidadao/consulta',
-  path: '/cidadao/consulta',
+const PortalAuditoriasRoute = PortalAuditoriasRouteImport.update({
+  id: '/portal/auditorias',
+  path: '/portal/auditorias',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PortalCertificacoesRoute = PortalCertificacoesRouteImport.update({
+  id: '/portal/certificacoes',
+  path: '/portal/certificacoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PortalDashboardRoute = PortalDashboardRouteImport.update({
+  id: '/portal/dashboard',
+  path: '/portal/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PortalInstituicoesRoute = PortalInstituicoesRouteImport.update({
+  id: '/portal/instituicoes',
+  path: '/portal/instituicoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PortalLoginRoute = PortalLoginRouteImport.update({
+  id: '/portal/login',
+  path: '/portal/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PortalRelatoriosRoute = PortalRelatoriosRouteImport.update({
+  id: '/portal/relatorios',
+  path: '/portal/relatorios',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CidadaoInstituicaoIdRoute = CidadaoInstituicaoIdRouteImport.update({
@@ -169,46 +169,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/portal/relatorios': {
-      id: '/portal/relatorios'
-      path: '/portal/relatorios'
-      fullPath: '/portal/relatorios'
-      preLoaderRoute: typeof PortalRelatoriosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/portal/login': {
-      id: '/portal/login'
-      path: '/portal/login'
-      fullPath: '/portal/login'
-      preLoaderRoute: typeof PortalLoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/portal/instituicoes': {
-      id: '/portal/instituicoes'
-      path: '/portal/instituicoes'
-      fullPath: '/portal/instituicoes'
-      preLoaderRoute: typeof PortalInstituicoesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/portal/dashboard': {
-      id: '/portal/dashboard'
-      path: '/portal/dashboard'
-      fullPath: '/portal/dashboard'
-      preLoaderRoute: typeof PortalDashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/portal/certificacoes': {
-      id: '/portal/certificacoes'
-      path: '/portal/certificacoes'
-      fullPath: '/portal/certificacoes'
-      preLoaderRoute: typeof PortalCertificacoesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/portal/auditorias': {
-      id: '/portal/auditorias'
-      path: '/portal/auditorias'
-      fullPath: '/portal/auditorias'
-      preLoaderRoute: typeof PortalAuditoriasRouteImport
+    '/cidadao/consulta': {
+      id: '/cidadao/consulta'
+      path: '/cidadao/consulta'
+      fullPath: '/cidadao/consulta'
+      preLoaderRoute: typeof CidadaoConsultaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cidadao/denuncia': {
@@ -218,11 +183,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CidadaoDenunciaRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/cidadao/consulta': {
-      id: '/cidadao/consulta'
-      path: '/cidadao/consulta'
-      fullPath: '/cidadao/consulta'
-      preLoaderRoute: typeof CidadaoConsultaRouteImport
+    '/portal/auditorias': {
+      id: '/portal/auditorias'
+      path: '/portal/auditorias'
+      fullPath: '/portal/auditorias'
+      preLoaderRoute: typeof PortalAuditoriasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/portal/certificacoes': {
+      id: '/portal/certificacoes'
+      path: '/portal/certificacoes'
+      fullPath: '/portal/certificacoes'
+      preLoaderRoute: typeof PortalCertificacoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/portal/dashboard': {
+      id: '/portal/dashboard'
+      path: '/portal/dashboard'
+      fullPath: '/portal/dashboard'
+      preLoaderRoute: typeof PortalDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/portal/instituicoes': {
+      id: '/portal/instituicoes'
+      path: '/portal/instituicoes'
+      fullPath: '/portal/instituicoes'
+      preLoaderRoute: typeof PortalInstituicoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/portal/login': {
+      id: '/portal/login'
+      path: '/portal/login'
+      fullPath: '/portal/login'
+      preLoaderRoute: typeof PortalLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/portal/relatorios': {
+      id: '/portal/relatorios'
+      path: '/portal/relatorios'
+      fullPath: '/portal/relatorios'
+      preLoaderRoute: typeof PortalRelatoriosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cidadao/instituicao/$id': {
@@ -250,3 +250,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

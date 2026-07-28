@@ -16,11 +16,11 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <>
       <Link to="/" onClick={onNavigate} className="flex items-center gap-2 px-5 h-16 border-b">
-        <div className="size-9 shrink-0 rounded-lg bg-gradient-to-br from-primary to-secondary grid place-items-center text-primary-foreground">
+        <div className="size-9 shrink-0 rounded-lg bg-brand-navy grid place-items-center text-primary-foreground">
           <Blocks className="size-5" />
         </div>
         <div className="leading-tight min-w-0">
-          <div className="font-semibold text-sm truncate">YC Blockchain</div>
+          <div className="font-semibold text-sm truncate">SIS — Selo Infância Segura</div>
           <div className="text-[11px] text-muted-foreground truncate">Portal Institucional</div>
         </div>
       </Link>

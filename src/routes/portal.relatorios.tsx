@@ -5,9 +5,9 @@ import { PortalLayout } from "@/components/PortalLayout";
 export const Route = createFileRoute("/portal/relatorios")({
   head: () => ({
     meta: [
-      { title: "Relatórios — Portal YC Blockchain" },
+      { title: "Relatórios — Portal SIS" },
       { name: "description", content: "Indicadores, gráficos e resumo de desempenho da plataforma." },
-      { property: "og:title", content: "Relatórios — Portal YC Blockchain" },
+      { property: "og:title", content: "Relatórios — Portal SIS" },
       { property: "og:description", content: "Resumo de desempenho institucional." },
     ],
   }),
@@ -35,11 +35,11 @@ function LineChart() {
         <line key={f} x1={pad} x2={w - pad} y1={pad + f * (h - pad * 2)} y2={pad + f * (h - pad * 2)} stroke="var(--border)" />
       ))}
       <path d={path("cert")} fill="none" stroke="var(--primary)" strokeWidth={2.5} />
-      <path d={path("aud")} fill="none" stroke="var(--secondary)" strokeWidth={2.5} />
+      <path d={path("aud")} fill="none" stroke="var(--brand-teal)" strokeWidth={2.5} />
       {trend.map((d, i) => (
         <g key={d.mes}>
           <circle cx={pad + i * step} cy={h - pad - (d.cert / maxV) * (h - pad * 2)} r={3} fill="var(--primary)" />
-          <circle cx={pad + i * step} cy={h - pad - (d.aud / maxV) * (h - pad * 2)} r={3} fill="var(--secondary)" />
+          <circle cx={pad + i * step} cy={h - pad - (d.aud / maxV) * (h - pad * 2)} r={3} fill="var(--brand-teal)" />
           <text x={pad + i * step} y={h - 8} textAnchor="middle" fontSize="10" fill="var(--muted-foreground)">{d.mes}</text>
         </g>
       ))}
@@ -78,7 +78,7 @@ function Relatorios() {
             </div>
             <div className="flex items-center gap-4 text-xs">
               <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-primary" /> Certificações</span>
-              <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-secondary" /> Auditorias</span>
+              <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-brand-teal" /> Auditorias</span>
             </div>
           </div>
           <LineChart />
@@ -94,8 +94,8 @@ function Relatorios() {
             <li className="flex justify-between"><span className="text-muted-foreground">Denúncias resolvidas</span><span className="font-semibold">19</span></li>
             <li className="flex justify-between"><span className="text-muted-foreground">Registros blockchain</span><span className="font-semibold font-mono">413</span></li>
           </ul>
-          <div className="mt-6 p-4 rounded-lg bg-secondary/15 border border-secondary/30 text-sm">
-            <strong className="text-secondary-foreground">Desempenho geral:</strong>{" "}
+          <div className="mt-6 p-4 rounded-lg bg-brand-teal/10 border border-brand-teal/30 text-sm">
+            <strong className="text-brand-teal">Desempenho geral:</strong>{" "}
             crescimento consistente com alta taxa de conformidade e transparência.
           </div>
         </div>
