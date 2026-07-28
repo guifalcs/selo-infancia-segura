@@ -5,9 +5,9 @@ import { PortalLayout } from "@/components/PortalLayout";
 export const Route = createFileRoute("/portal/dashboard")({
   head: () => ({
     meta: [
-      { title: "Dashboard — Portal YC Blockchain" },
-      { name: "description", content: "Indicadores gerais do portal institucional YC Blockchain." },
-      { property: "og:title", content: "Dashboard — Portal YC Blockchain" },
+      { title: "Dashboard — Portal SIS" },
+      { name: "description", content: "Indicadores gerais do portal institucional do SIS." },
+      { property: "og:title", content: "Dashboard — Portal SIS" },
       { property: "og:description", content: "Visão consolidada de instituições, certificações, auditorias e denúncias." },
     ],
   }),
@@ -29,12 +29,12 @@ const maxBar = Math.max(...barData.map((b) => b.v));
 
 function Dashboard() {
   return (
-    <PortalLayout title="Dashboard" subtitle="Visão geral do sistema YC Blockchain">
+    <PortalLayout title="Dashboard" subtitle="Visão geral do sistema SIS">
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
         {indicators.map((i) => (
           <div key={i.label} className="bg-card border rounded-xl p-5 shadow-sm">
             <div className="flex items-center justify-between">
-              <div className={`size-10 rounded-lg grid place-items-center ${i.color === "primary" ? "bg-primary/10 text-primary" : i.color === "secondary" ? "bg-secondary/20 text-secondary-foreground" : "bg-destructive/10 text-destructive"}`}>
+              <div className={`size-10 rounded-lg grid place-items-center ${i.color === "primary" ? "bg-primary/10 text-primary" : i.color === "secondary" ? "bg-brand-teal/10 text-brand-teal" : "bg-destructive/10 text-destructive"}`}>
                 <i.icon className="size-5" />
               </div>
               <span className="text-xs font-medium text-muted-foreground inline-flex items-center gap-1">
@@ -62,7 +62,7 @@ function Dashboard() {
                 <div className="w-full flex flex-col items-center">
                   <span className="text-[11px] font-mono text-muted-foreground mb-1">{b.v}</span>
                   <div
-                    className="w-full rounded-t-md bg-gradient-to-t from-primary to-secondary"
+                    className="w-full rounded-t-md bg-brand-teal"
                     style={{ height: `${(b.v / maxBar) * 180}px` }}
                   />
                 </div>
@@ -77,9 +77,9 @@ function Dashboard() {
           <p className="text-xs text-muted-foreground">Certificações ativas</p>
           <div className="mt-6 space-y-4">
             {[
-              { label: "Selo Ouro", v: 42, c: "bg-secondary" },
-              { label: "Selo Prata", v: 58, c: "bg-primary" },
-              { label: "Selo Bronze", v: 22, c: "bg-accent-foreground/70" },
+              { label: "Selo Ouro", v: 42, c: "bg-seal-ouro" },
+              { label: "Selo Prata", v: 58, c: "bg-seal-prata" },
+              { label: "Selo Bronze", v: 22, c: "bg-seal-bronze" },
             ].map((s) => (
               <div key={s.label}>
                 <div className="flex justify-between text-xs mb-1">

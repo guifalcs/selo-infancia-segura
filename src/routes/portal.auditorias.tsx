@@ -14,10 +14,10 @@ const color: Record<string, "default" | "secondary" | "destructive" | "outline">
 export const Route = createFileRoute("/portal/auditorias")({
   head: () => ({
     meta: [
-      { title: "Auditorias — Portal YC Blockchain" },
+      { title: "Auditorias — Portal SIS" },
       { name: "description", content: "Auditorias realizadas nas instituições cadastradas." },
-      { property: "og:title", content: "Auditorias — Portal YC Blockchain" },
-      { property: "og:description", content: "Registro de auditorias no sistema YC Blockchain." },
+      { property: "og:title", content: "Auditorias — Portal SIS" },
+      { property: "og:description", content: "Registro de auditorias no sistema SIS." },
     ],
   }),
   component: () => (

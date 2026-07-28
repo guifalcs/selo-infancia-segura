@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"  role="img" aria-label="SIS - Selo Infancia Segura">
+      <defs>
+        <linearGradient id="arcLeft" x1="0" y1="0" x2="0.35" y2="1">
+          <stop offset="0" stop-color="#159C9C" />
+          <stop offset="0.5" stop-color="#1E76D2" />
+          <stop offset="1" stop-color="#159C9C" />
+        </linearGradient>
+        <linearGradient id="arcRight" x1="0" y1="0" x2="0.4" y2="1">
+          <stop offset="0" stop-color="#5CB335" />
+          <stop offset="0.55" stop-color="#5CB335" />
+          <stop offset="1" stop-color="#F5A623" />
+        </linearGradient>
+      </defs>
+
+      
+      <path
+        d="M 92.33 12.34 A 88 88 0 0 0 92.33 187.66"
+        fill="none"
+        stroke="url(#arcLeft)"
+        stroke-width="7"
+        stroke-linecap="round"
+      />
+      <path
+        d="M 107.67 12.34 A 88 88 0 0 1 107.67 187.66"
+        fill="none"
+        stroke="url(#arcRight)"
+        stroke-width="7"
+        stroke-linecap="round"
+      />
+
+      
+      
+      <path
+        d="M 100 38 L 146 56 L 146 100 C 146 129 126 147 100 156 C 74 147 54 129 54 100 L 54 56 Z"
+        fill="#ffffff"
+        stroke="#16305C"
+        stroke-width="6.5"
+        stroke-linejoin="round"
+      />
+
+      
+      <path
+        d="M 73 120 L 89 139 L 130 96"
+        fill="none"
+        stroke="#5CB335"
+        stroke-width="10"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+
+      
+      <path
+        d="M 100 53 L 103.8 62.2 L 113.7 63 L 106.2 69.5 L 108.5 79.1 L 100 73.9 L 91.5 79.1 L 93.8 69.5 L 86.3 63 L 96.2 62.2 Z"
+        fill="#FFC81E"
+      />
+
+      
+      <g fill="#1B3B6F">
+        <ellipse cx="74.8" cy="96" rx="4.6" ry="6.2" />
+        <circle cx="82.5" cy="92" r="8.4" />
+        <path d="M 75.5 125 L 77 108 Q 78 101 83 101 Q 88 101 89 108 L 90.5 125 Z" />
+        <path d="M 87 106 L 95.5 84 L 99.6 85.7 L 91 107.7 Z" />
+      </g>
+
+      
+      <g fill="#159C9C">
+        <circle cx="117.5" cy="92" r="8.4" />
+        <path d="M 109.5 125 L 111 108 Q 112 101 117 101 Q 122 101 123 108 L 124.5 125 Z" />
+        <path d="M 113 106 L 104.5 84 L 108.6 82.3 L 117 104.3 Z" />
+      </g>
+    
+
+      
+      <g>
+        <circle cx="12" cy="100" r="19" fill="#1E76D2" stroke="#ffffff" stroke-width="4" />
+        <path d="M 7.5 98 v -3.5 a 4.5 4.5 0 0 1 9 0 V 98" fill="none" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round" />
+        <rect x="5.5" y="98" width="13" height="10.5" rx="2.2" fill="#ffffff" />
+      </g>
+
+      
+      <g>
+        <circle cx="188" cy="100" r="19" fill="#F5A623" stroke="#ffffff" stroke-width="4" />
+        <g fill="#ffffff">
+          <circle cx="188" cy="95.5" r="3.4" />
+          <circle cx="180.8" cy="97.5" r="2.7" />
+          <circle cx="195.2" cy="97.5" r="2.7" />
+          <path d="M 182 108 a 6 6 0 0 1 12 0 Z" />
+          <path d="M 176 107.5 a 4.6 4.6 0 0 1 5.6 -4.3 a 8.4 8.4 0 0 0 -2.4 4.3 Z" />
+          <path d="M 200 107.5 a 4.6 4.6 0 0 0 -5.6 -4.3 a 8.4 8.4 0 0 1 2.4 4.3 Z" />
+        </g>
+      </g>
+
+      
+      <g>
+        <circle cx="100" cy="188" r="19" fill="#159C9C" stroke="#ffffff" stroke-width="4" />
+        <rect x="93" y="179" width="13" height="16" rx="2" fill="#ffffff" />
+        <g stroke="#159C9C" stroke-width="1.5" stroke-linecap="round">
+          <line x1="96" y1="183" x2="103" y2="183" />
+          <line x1="96" y1="186.5" x2="103" y2="186.5" />
+          <line x1="96" y1="190" x2="100" y2="190" />
+        </g>
+        <path d="M 100.5 191.5 L 103.5 194.5 L 109 188.5" fill="none" stroke="#ffffff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" />
+      </g>
+    </svg>
