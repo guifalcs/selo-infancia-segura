@@ -18,13 +18,13 @@ import { institutions } from "@/lib/mock-data";
 export const Route = createFileRoute("/cidadao/denuncia")({
   head: () => ({
     meta: [
-      { title: "Canal de denúncia — SIS" },
+      { title: "Canal de denúncia | SIS" },
       {
         name: "description",
         content:
           "Canal anônimo para registrar irregularidades em instituições que atendem crianças e adolescentes. O registro é imutável e rastreável.",
       },
-      { property: "og:title", content: "Canal de denúncia — SIS" },
+      { property: "og:title", content: "Canal de denúncia | SIS" },
       {
         property: "og:description",
         content: "Registro anônimo, imutável e rastreável de irregularidades.",
@@ -196,7 +196,7 @@ function Denuncia() {
                       <SelectContent>
                         {institutions.map((i) => (
                           <SelectItem key={i.id} value={i.id}>
-                            {i.nome} — {i.cidade}/{i.uf}
+                            {i.nome}, {i.cidade}/{i.uf}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -245,7 +245,7 @@ function Denuncia() {
                 </Button>
 
                 <p className="mt-4 text-center text-xs text-muted-foreground">
-                  Protótipo demonstrativo — nada é enviado ou armazenado de fato.
+                  Protótipo demonstrativo: nada é enviado ou armazenado de fato.
                 </p>
               </form>
             )}
