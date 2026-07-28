@@ -11,12 +11,13 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { PortalSessionProvider } from "../lib/portal-session";
 
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="font-serif text-7xl font-bold text-primary">404</h1>
+        <h1 className="text-7xl font-bold text-primary">404</h1>
         <h2 className="mt-4 text-xl font-semibold text-foreground">Página não encontrada</h2>
         <p className="mt-2 text-sm text-muted-foreground">
           O endereço que você acessou não existe ou foi movido.
@@ -77,13 +78,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "SIS — Selo Infância Segura" },
+      { title: "SIS: Selo Infância Segura" },
       {
         name: "description",
         content:
           "Certificação de instituições que atendem crianças e adolescentes, com histórico público e auditável registrado em blockchain.",
       },
-      { property: "og:title", content: "SIS — Selo Infância Segura" },
+      { property: "og:title", content: "SIS: Selo Infância Segura" },
       {
         property: "og:description",
         content:
@@ -91,7 +92,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { property: "og:type", content: "website" },
       { property: "og:locale", content: "pt_BR" },
-      { property: "og:image", content: "/marca/sis-logo-fundo-branco.png" },
+      { property: "og:image", content: "/marca/og-sis.png" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "theme-color", content: "#1B3B6F" },
     ],
@@ -130,8 +131,12 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      {/* A sessão do portal precisa sobreviver à navegação entre rotas, por isso
+          o provider fica no shell e não dentro de cada página. */}
+      <PortalSessionProvider>
+        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+        <Outlet />
+      </PortalSessionProvider>
     </QueryClientProvider>
   );
 }

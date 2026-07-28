@@ -1,105 +1,214 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { TrendingUp, Award, ShieldCheck, ClipboardCheck } from "lucide-react";
+import { TrendingUp, Award, ShieldCheck, Megaphone } from "lucide-react";
+
 import { PortalLayout } from "@/components/PortalLayout";
+import { Indicador, Painel, Vazio, BarraDeNota, AvisoDemo } from "@/components/PortalUI";
+import { SealChip } from "@/components/Seal";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  denuncias,
+  denunciaEmAberto,
+  mediaPorEixo,
+  resumoDoConjunto,
+  type Institution,
+} from "@/lib/mock-data";
+import type { Escopo } from "@/lib/portal-access";
 
 export const Route = createFileRoute("/portal/relatorios")({
   head: () => ({
     meta: [
-      { title: "Relatórios — Portal SIS" },
-      { name: "description", content: "Indicadores, gráficos e resumo de desempenho da plataforma." },
-      { property: "og:title", content: "Relatórios — Portal SIS" },
-      { property: "og:description", content: "Resumo de desempenho institucional." },
+      { title: "Relatórios | Portal SIS" },
+      { name: "description", content: "Indicadores consolidados do seu escopo de acesso." },
+      { property: "og:title", content: "Relatórios | Portal SIS" },
+      { property: "og:description", content: "Conformidade, evolução e pontos de atenção." },
     ],
   }),
   component: Relatorios,
 });
 
-const trend = [
-  { mes: "Jan", cert: 12, aud: 3 },
-  { mes: "Fev", cert: 18, aud: 5 },
-  { mes: "Mar", cert: 22, aud: 6 },
-  { mes: "Abr", cert: 19, aud: 4 },
-  { mes: "Mai", cert: 26, aud: 7 },
-  { mes: "Jun", cert: 25, aud: 6 },
-];
-
-function LineChart() {
-  const w = 560, h = 200, pad = 30;
-  const maxV = 30;
-  const step = (w - pad * 2) / (trend.length - 1);
-  const path = (key: "cert" | "aud") =>
-    trend.map((d, i) => `${i === 0 ? "M" : "L"} ${pad + i * step} ${h - pad - (d[key] / maxV) * (h - pad * 2)}`).join(" ");
+function Relatorios() {
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-56">
-      {[0, 0.25, 0.5, 0.75, 1].map((f) => (
-        <line key={f} x1={pad} x2={w - pad} y1={pad + f * (h - pad * 2)} y2={pad + f * (h - pad * 2)} stroke="var(--border)" />
-      ))}
-      <path d={path("cert")} fill="none" stroke="var(--primary)" strokeWidth={2.5} />
-      <path d={path("aud")} fill="none" stroke="var(--brand-teal)" strokeWidth={2.5} />
-      {trend.map((d, i) => (
-        <g key={d.mes}>
-          <circle cx={pad + i * step} cy={h - pad - (d.cert / maxV) * (h - pad * 2)} r={3} fill="var(--primary)" />
-          <circle cx={pad + i * step} cy={h - pad - (d.aud / maxV) * (h - pad * 2)} r={3} fill="var(--brand-teal)" />
-          <text x={pad + i * step} y={h - 8} textAnchor="middle" fontSize="10" fill="var(--muted-foreground)">{d.mes}</text>
-        </g>
-      ))}
-    </svg>
+    <PortalLayout
+      title="Relatórios"
+      subtitle="Consolidado do conjunto de instituições sob sua responsabilidade"
+      papeis={["admin", "rede"]}
+    >
+      {(escopo) => <Consolidado escopo={escopo} />}
+    </PortalLayout>
   );
 }
 
-function Relatorios() {
-  const kpis = [
-    { label: "Taxa de aprovação", value: "87%", icon: TrendingUp },
-    { label: "Certificações no período", value: "122", icon: Award },
-    { label: "Selos Ouro ativos", value: "42", icon: ShieldCheck },
-    { label: "Auditorias concluídas", value: "31", icon: ClipboardCheck },
-  ];
+function Consolidado({ escopo }: { escopo: Escopo }) {
+  const lista = escopo.instituicoes;
+  const resumo = resumoDoConjunto(lista);
+  const eixosDoEscopo = mediaPorEixo(lista).filter((e) => e.media !== null);
+  const ids = new Set(lista.map((i) => i.id));
+  const doEscopo = denuncias.filter((d) => ids.has(d.instituicaoId));
+  const procedentes = doEscopo.filter((d) => d.status === "Procedente").length;
+
+  const ranking = [...lista]
+    .filter((i): i is Institution & { pontuacao: number } => i.pontuacao !== null)
+    .sort((a, b) => b.pontuacao - a.pontuacao);
+
+  const conformidade = resumo.total ? Math.round((resumo.certificadas / resumo.total) * 100) : 0;
 
   return (
-    <PortalLayout title="Relatórios" subtitle="Indicadores e desempenho da plataforma">
-      <div className="grid md:grid-cols-4 gap-4">
-        {kpis.map((k) => (
-          <div key={k.label} className="bg-card border rounded-xl p-5 shadow-sm">
-            <div className="size-10 rounded-lg bg-primary/10 text-primary grid place-items-center">
-              <k.icon className="size-5" />
-            </div>
-            <div className="mt-4 text-2xl font-bold">{k.value}</div>
-            <div className="text-xs text-muted-foreground">{k.label}</div>
-          </div>
-        ))}
+    <div className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Indicador
+          icon={TrendingUp}
+          label="Taxa de conformidade"
+          valor={`${conformidade}%`}
+          detalhe={`${resumo.certificadas} de ${resumo.total} com selo vigente`}
+          tom="green"
+        />
+        <Indicador
+          icon={Award}
+          label="Média de pontuação"
+          valor={resumo.media ?? "-"}
+          detalhe={`${resumo.porNivel.Ouro} Ouro · ${resumo.porNivel.Prata} Prata · ${resumo.porNivel.Bronze} Bronze`}
+        />
+        <Indicador
+          icon={ShieldCheck}
+          label="Subselos temáticos"
+          valor={resumo.subselos}
+          detalhe="Inclusão, acessibilidade e boas práticas"
+          tom="teal"
+        />
+        <Indicador
+          icon={Megaphone}
+          label="Denúncias procedentes"
+          valor={procedentes}
+          detalhe={`${doEscopo.filter(denunciaEmAberto).length} ainda em aberto`}
+          tom={procedentes ? "amber" : "green"}
+        />
       </div>
 
-      <div className="mt-6 grid lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 bg-card border rounded-xl p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <h3 className="font-semibold">Certificações vs Auditorias</h3>
-              <p className="text-xs text-muted-foreground">Evolução semestral</p>
-            </div>
-            <div className="flex items-center gap-4 text-xs">
-              <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-primary" /> Certificações</span>
-              <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-brand-teal" /> Auditorias</span>
-            </div>
-          </div>
-          <LineChart />
-        </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Painel
+          titulo="Média por eixo avaliado"
+          descricao="Onde o conjunto está forte e onde a fiscalização precisa insistir."
+        >
+          {eixosDoEscopo.length === 0 ? (
+            <Vazio>Nenhuma avaliação concluída no escopo.</Vazio>
+          ) : (
+            <ul className="space-y-4 p-5">
+              {eixosDoEscopo.map((e) => (
+                <li key={e.eixo}>
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+                    <p className="text-sm font-semibold">{e.eixo}</p>
+                    <p className="font-mono text-sm font-semibold text-primary">{e.media}</p>
+                  </div>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{e.base}</p>
+                  <BarraDeNota nota={e.media ?? 0} rotulo={`Média em ${e.eixo}`} className="mt-2" />
+                </li>
+              ))}
+            </ul>
+          )}
+        </Painel>
 
-        <div className="bg-card border rounded-xl p-6 shadow-sm">
-          <h3 className="font-semibold">Resumo de desempenho</h3>
-          <p className="text-xs text-muted-foreground mb-4">Últimos 6 meses</p>
-          <ul className="space-y-3 text-sm">
-            <li className="flex justify-between"><span className="text-muted-foreground">Novas instituições</span><span className="font-semibold">+23</span></li>
-            <li className="flex justify-between"><span className="text-muted-foreground">Selos emitidos</span><span className="font-semibold">+38</span></li>
-            <li className="flex justify-between"><span className="text-muted-foreground">Auditorias aprovadas</span><span className="font-semibold">27</span></li>
-            <li className="flex justify-between"><span className="text-muted-foreground">Denúncias resolvidas</span><span className="font-semibold">19</span></li>
-            <li className="flex justify-between"><span className="text-muted-foreground">Registros blockchain</span><span className="font-semibold font-mono">413</span></li>
-          </ul>
-          <div className="mt-6 p-4 rounded-lg bg-brand-teal/10 border border-brand-teal/30 text-sm">
-            <strong className="text-brand-teal">Desempenho geral:</strong>{" "}
-            crescimento consistente com alta taxa de conformidade e transparência.
+        <Painel
+          titulo="Situação das instituições"
+          descricao="Distribuição por estágio no ciclo de certificação."
+        >
+          <div className="space-y-4 p-5">
+            {(
+              [
+                { label: "Certificadas", v: resumo.certificadas, c: "bg-success" },
+                { label: "Em avaliação", v: resumo.emAvaliacao, c: "bg-brand-blue" },
+                {
+                  label: "Aguardando primeira visita",
+                  v: resumo.pendentes,
+                  c: "bg-muted-foreground",
+                },
+                { label: "Suspensas", v: resumo.suspensas, c: "bg-destructive" },
+              ] as const
+            ).map((s) => (
+              <div key={s.label}>
+                <div className="mb-1 flex justify-between text-xs">
+                  <span>{s.label}</span>
+                  <span className="font-mono text-muted-foreground">{s.v}</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className={`h-full ${s.c}`}
+                    style={{ width: `${resumo.total ? (s.v / resumo.total) * 100 : 0}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+
+            <dl className="mt-6 space-y-2 border-t pt-4 text-sm">
+              {[
+                { rotulo: "Avaliações em aberto", valor: resumo.avaliacoesAbertas },
+                { rotulo: "Denúncias registradas", valor: resumo.denuncias },
+                { rotulo: "Denúncias em aberto", valor: resumo.denunciasAbertas },
+              ].map((l) => (
+                <div key={l.rotulo} className="flex justify-between">
+                  <dt className="text-muted-foreground">{l.rotulo}</dt>
+                  <dd className="font-semibold">{l.valor}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
-        </div>
+        </Painel>
       </div>
-    </PortalLayout>
+
+      <Painel
+        titulo="Ranking por pontuação"
+        descricao="A escala Bronze/Prata/Ouro existe para premiar evolução, não só aprovação; por isso o ranking acompanha a nota, e não apenas o selo."
+      >
+        {ranking.length === 0 ? (
+          <Vazio>Nenhuma instituição com nota apurada.</Vazio>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12">#</TableHead>
+                  <TableHead className="whitespace-nowrap">Instituição</TableHead>
+                  <TableHead className="whitespace-nowrap">Selo</TableHead>
+                  <TableHead className="whitespace-nowrap">Nota</TableHead>
+                  <TableHead className="min-w-40">Desempenho</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {ranking.map((i, idx) => (
+                  <TableRow key={i.id}>
+                    <TableCell className="font-mono text-sm text-muted-foreground">
+                      {idx + 1}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {i.nome}
+                      <span className="block text-xs text-muted-foreground">
+                        {i.cidade} - {i.uf}
+                      </span>
+                    </TableCell>
+                    <TableCell>{i.nivel ? <SealChip nivel={i.nivel} /> : "-"}</TableCell>
+                    <TableCell className="font-mono text-sm font-semibold">{i.pontuacao}</TableCell>
+                    <TableCell>
+                      <BarraDeNota nota={i.pontuacao} rotulo={i.nome} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </Painel>
+
+      <AvisoDemo>
+        {escopo.papel === "rede"
+          ? "Na plataforma, este relatório é exportável em PDF para prestação de contas ao controle interno e aos órgãos fiscalizadores."
+          : "Na plataforma, esta visão alimenta o acompanhamento comercial e o relatório de impacto por município."}
+      </AvisoDemo>
+    </div>
   );
 }

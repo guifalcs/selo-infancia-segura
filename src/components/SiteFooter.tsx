@@ -71,7 +71,7 @@ export function SiteFooter() {
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
         <div className="grid gap-10 md:grid-cols-[1.4fr_repeat(3,1fr)]">
           <div>
-            <BrandLockup showTagline />
+            <BrandLockup className="h-16" />
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
               Certificação de instituições que atendem crianças e adolescentes, com histórico
               público e auditável registrado em blockchain.
@@ -80,7 +80,7 @@ export function SiteFooter() {
 
           {colunas.map((col) => (
             <nav key={col.titulo} aria-label={col.titulo}>
-              <h2 className="font-serif text-sm font-bold uppercase tracking-[0.1em] text-primary">
+              <h2 className="text-sm font-bold uppercase tracking-[0.1em] text-primary">
                 {col.titulo}
               </h2>
               <ul className="mt-4 space-y-2.5 text-sm">
@@ -102,7 +102,7 @@ export function SiteFooter() {
 
         <div className="mt-12 flex flex-col gap-2 border-t pt-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
           <p>
-            © {new Date().getFullYear()} SIS — Selo Infância Segura. Protótipo acadêmico sem vínculo
+            © {new Date().getFullYear()} SIS: Selo Infância Segura. Protótipo acadêmico sem vínculo
             institucional com os órgãos citados.
           </p>
           <p>Dados exibidos são fictícios e servem apenas para demonstração.</p>

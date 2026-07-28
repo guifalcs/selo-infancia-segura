@@ -1,32 +1,34 @@
 # Imagens do portal
 
-As ilustrações do site são SVG autorais (em `src/components/illustrations/`) e servem como
-**estágio intermediário**. A intenção do projeto é substituí-las por fotografia real, que tem
-muito mais peso numa apresentação.
+Fotografia. Ilustrações vetoriais autorais ficam em `src/components/illustrations/`, a marca em
+`public/marca/` e os selos em `public/selos/`.
 
-## Como substituir
+## Slots em uso
 
-1. Coloque o arquivo nesta pasta com o nome esperado (tabela abaixo).
-2. No componente indicado, troque o `<Componente />` por:
+| Arquivo                 | Proporção | Resolução | Onde aparece          |
+| ----------------------- | --------- | --------- | --------------------- |
+| `hero-instituicao.webp` | 4:3       | 1448×1086 | Home, seção principal |
 
-   ```tsx
-   <img
-     src="/imagens/hero-instituicao.jpg"
-     alt="Descrição objetiva do que aparece na foto"
-     className="w-full rounded-xl border bg-card shadow-sm"
-     width={1600}
-     height={1200}
-   />
-   ```
+O hero é o elemento de LCP da home, então carrega com `loading="eager"` e `fetchPriority="high"`
+— **nunca** `lazy`. Mantenha `width`/`height` explícitos no `<img>` para não causar layout shift.
 
+## Como trocar ou acrescentar
+
+1. Exporte em **WebP**, qualidade ~82, abaixo de **300 KB** (largura útil máxima no layout: 1600 px).
+2. Coloque o arquivo aqui e aponte a `<img>` para `/imagens/<nome>.webp`.
 3. Mantenha as mesmas classes de tamanho e proporção para não quebrar o layout.
 4. Escreva um `alt` descritivo — este portal fala de acessibilidade, então precisa ser acessível.
+   O `alt` do hero descreve a cena **e** a rampa de acessibilidade, não só "foto de escola".
 
-## Slots previstos
+Não há `cwebp` nem ImageMagick nesta máquina. Para converter, use Python:
 
-| Arquivo esperado         | Proporção | Tamanho mínimo | Onde aparece                          |
-| ------------------------ | --------- | -------------- | ------------------------------------- |
-| `hero-instituicao.jpg`   | 4:3       | 1600 × 1200    | Home, seção principal (`CenaInstituicao`) |
+```python
+from PIL import Image
+Image.open("origem.png").convert("RGB").save("destino.webp", "WEBP", quality=82, method=6)
+```
+
+Imagem **com transparência** exige redimensionar em espaço pré-multiplicado — senão o RGB guardado
+sob os pixels transparentes sangra para a borda e cria franja. Foi o caso dos selos.
 
 ## Antes de publicar qualquer foto de criança
 
@@ -36,13 +38,10 @@ Isto não é detalhe burocrático — é o núcleo do que o projeto defende:
   responsáveis (ECA, arts. 17 e 18; LGPD, art. 14, que exige consentimento específico de um dos
   pais ou responsável legal).
 - **Banco de imagens licenciado** (Unsplash, Pexels, Adobe Stock) resolve o problema jurídico,
-  porque o licenciamento e o *model release* já vêm tratados. É o caminho recomendado para o pitch.
+  porque o licenciamento e o _model release_ já vêm tratados.
 - **Fotos sem rosto** — mãos, silhuetas, detalhe de ambiente, crianças de costas — são uma
-  alternativa segura e muito usada por organizações do terceiro setor.
+  alternativa segura e muito usada por organizações do terceiro setor. É o caminho adotado no
+  `hero-instituicao.webp`: todos de costas, nenhum rosto identificável.
+- **Imagem gerada por IA** elimina a questão de autorização de imagem, mas continua sensível num
+  projeto sobre proteção infantil. Se usar, mantenha a regra de não gerar rosto de criança.
 - Nunca use foto real de uma instituição existente ao lado de dados fictícios de certificação.
-
-## Otimização
-
-- Exporte em `.webp` ou `.jpg` com qualidade ~80.
-- Mantenha cada arquivo abaixo de ~300 KB.
-- Largura máxima útil no layout atual: 1600 px.

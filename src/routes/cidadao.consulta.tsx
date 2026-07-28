@@ -4,6 +4,7 @@ import { Search, MapPin, SlidersHorizontal, ArrowRight, Info } from "lucide-reac
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { StatusBadge } from "@/components/StatusBadge";
+import { SubseloBadge } from "@/components/SubseloBadge";
 import { SealChip } from "@/components/Seal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -19,13 +20,13 @@ import { institutions } from "@/lib/mock-data";
 export const Route = createFileRoute("/cidadao/consulta")({
   head: () => ({
     meta: [
-      { title: "Consulta pública de instituições — SIS" },
+      { title: "Consulta pública de instituições | SIS" },
       {
         name: "description",
         content:
           "Consulte o histórico de certificação de escolas, creches, clínicas, clubes, parques e projetos sociais que atendem crianças e adolescentes.",
       },
-      { property: "og:title", content: "Consulta pública de instituições — SIS" },
+      { property: "og:title", content: "Consulta pública de instituições | SIS" },
       {
         property: "og:description",
         content: "Verifique o selo, os eixos avaliados e o histórico de uma instituição.",
@@ -208,6 +209,17 @@ function Consulta() {
                     {i.pontuacao !== null && (
                       <span className="text-xs text-muted-foreground">
                         {i.pontuacao}/100 pontos
+                      </span>
+                    )}
+
+                    {/* Subselos em escala reduzida: aqui eles são sinal de
+                        comparação entre instituições, não o assunto do card.
+                        Sem `decorativa`, porque o nome não aparece por escrito. */}
+                    {i.subselos.length > 0 && (
+                      <span className="ml-auto flex items-center gap-1">
+                        {i.subselos.map((s) => (
+                          <SubseloBadge key={s} nome={s} size={24} />
+                        ))}
                       </span>
                     )}
                   </div>

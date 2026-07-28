@@ -157,7 +157,7 @@ function Denuncia() {
                 <div className="mx-auto grid size-14 place-items-center rounded-full bg-success/10 text-success">
                   <CheckCircle2 className="size-8" aria-hidden />
                 </div>
-                <h2 className="mt-5 font-serif text-2xl font-bold text-primary">
+                <h2 className="mt-5 text-2xl font-bold text-primary">
                   Denúncia registrada
                 </h2>
                 <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">
@@ -181,7 +181,7 @@ function Denuncia() {
               </div>
             ) : (
               <form onSubmit={enviar} className="rounded-lg border bg-card p-6 sm:p-8">
-                <h2 className="font-serif text-xl font-bold text-primary">Dados da ocorrência</h2>
+                <h2 className="text-xl font-bold text-primary">Dados da ocorrência</h2>
                 <p className="mt-1.5 text-sm text-muted-foreground">
                   Todos os campos são obrigatórios. Não inclua seu nome ou contato.
                 </p>
@@ -253,7 +253,7 @@ function Denuncia() {
 
           {/* Garantias. */}
           <aside aria-label="Como sua denúncia é tratada" className="space-y-4">
-            <h2 className="font-serif text-lg font-bold text-primary">
+            <h2 className="text-lg font-bold text-primary">
               Como sua denúncia é tratada
             </h2>
             {garantias.map((g) => (

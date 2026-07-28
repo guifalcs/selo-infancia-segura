@@ -3,31 +3,17 @@ import { useId } from "react";
 /**
  * Ilustrações institucionais em SVG.
  *
- * ┌──────────────────────────────────────────────────────────────────────────┐
- * │ TODO(foto) — SUBSTITUIÇÃO POR FOTOGRAFIA                                 │
- * │                                                                          │
- * │ Estas ilustrações são um estágio intermediário. A intenção do projeto é  │
- * │ trocá-las por fotografia real (crianças, famílias, escolas, ambientes    │
- * │ acessíveis), que carrega muito mais peso emocional numa apresentação.    │
- * │                                                                          │
- * │ Como trocar, sem precisar mexer em layout:                               │
- * │   1. coloque o arquivo em `public/imagens/` com o nome indicado em cada  │
- * │      componente abaixo;                                                  │
- * │   2. troque o <Componente /> por <img src="/imagens/nome.jpg" ... />     │
- * │      mantendo as mesmas classes de tamanho e `aspect-*`;                 │
- * │   3. escreva um `alt` descritivo — o portal é sobre acessibilidade.      │
- * │                                                                          │
- * │ As proporções esperadas estão documentadas em `public/imagens/README.md`.│
- * │                                                                          │
- * │ Atenção jurídica: fotografia de criança identificável exige autorização  │
- * │ de uso de imagem dos responsáveis (ECA art. 17 e 18, LGPD art. 14).      │
- * │ Para o pitch, prefira banco de imagens licenciado ou fotos sem rosto.    │
- * └──────────────────────────────────────────────────────────────────────────┘
+ * O plano original era substituí-las por fotografia. Isso já aconteceu no hero
+ * da home, que hoje usa `public/imagens/hero-instituicao.webp` — o passo a passo
+ * e as regras jurídicas para foto de criança estão em `public/imagens/README.md`.
  */
 
 /**
  * Cena principal da home — proporção 4:3.
- * TODO(foto): substituir por `public/imagens/hero-instituicao.jpg` (1600×1200).
+ *
+ * NÃO ESTÁ EM USO: o hero foi substituído por fotografia. Mantida como
+ * alternativa caso se queira voltar ao vetor (ela acompanha tema claro/escuro e
+ * não custa requisição de rede). Se ficar claro que não se volta, remova.
  */
 export function CenaInstituicao({ className }: { className?: string }) {
   const uid = useId().replace(/:/g, "");

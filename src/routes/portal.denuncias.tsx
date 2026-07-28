@@ -145,7 +145,7 @@ function Fila({ escopo }: { escopo: Escopo }) {
       <AvisoDemo>
         {escopo.papel === "admin"
           ? "A equipe SIS é quem classifica a denúncia, abre avaliação extraordinária e decide por suspender um selo. A instituição vê o teor e o encaminhamento, nunca a identidade de quem denunciou."
-          : "A instituição enxerga o teor e o andamento de cada relato, mas não quem o registrou — é o que mantém o canal utilizável por famílias e funcionários."}
+          : "A instituição enxerga o teor e o andamento de cada relato, mas não quem o registrou: isso é o que mantém o canal utilizável por famílias e funcionários."}
       </AvisoDemo>
     </div>
   );

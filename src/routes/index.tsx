@@ -24,26 +24,27 @@ import { Button } from "@/components/ui/button";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SectionHeading } from "@/components/SectionHeading";
+import { SubseloBadge } from "@/components/SubseloBadge";
 import { Seal } from "@/components/Seal";
-import { CenaInstituicao, TramaInstitucional } from "@/components/illustrations";
+import { TramaInstitucional } from "@/components/illustrations";
 import { eixos, niveis, subselos } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "SIS — Selo Infância Segura" },
+      { title: "SIS | Selo Infância Segura" },
       {
         name: "description",
         content:
-          "Certificação de instituições que atendem crianças e adolescentes, com histórico público e auditável registrado em blockchain. Consulte escolas, creches, clínicas, clubes e projetos sociais.",
+          "Certificação de instituições que atendem crianças e adolescentes, com histórico público e auditável registrado em blockchain. Consulte escolas, creches, clínicas, clubes, parques, cursos e projetos sociais.",
       },
-      { property: "og:title", content: "SIS — Selo Infância Segura" },
+      { property: "og:title", content: "SIS | Selo Infância Segura" },
       {
         property: "og:description",
         content:
           "Transparência, segurança e confiança na escolha de onde as crianças passam o dia.",
       },
-      { property: "og:image", content: "/marca/sis-logo-fundo-branco.png" },
+      { property: "og:image", content: "/marca/og-sis.png" },
     ],
   }),
   component: Home,
@@ -86,7 +87,7 @@ const etapas = [
   {
     icon: ShieldCheck,
     titulo: "Pontuação e selo",
-    texto: "A nota define o nível — Bronze, Prata ou Ouro — e os subselos conquistados.",
+    texto: "A nota define o nível (Bronze, Prata ou Ouro) e os subselos conquistados.",
   },
   {
     icon: Blocks,
@@ -119,7 +120,7 @@ const paraQuem = [
     icon: Building2,
     titulo: "Para instituições",
     texto:
-      "Um caminho estruturado para demonstrar conformidade a órgãos fiscalizadores e evoluir de nível a cada ciclo de avaliação.",
+      "Um caminho estruturado para demonstrar conformidade a órgãos fiscalizadores, fortalecer a reputação junto às famílias e evoluir de nível a cada ciclo de avaliação.",
     acao: { label: "Portal institucional", to: "/portal/login" as const },
   },
 ];
@@ -135,7 +136,7 @@ const razoesBlockchain = [
     icon: Megaphone,
     titulo: "Denúncia anônima e rastreável",
     texto:
-      "O denunciante não é identificado, mas recebe um comprovante próprio de que o apontamento foi registrado — e a instituição não consegue fazê-lo desaparecer.",
+      "O denunciante não é identificado, mas recebe um comprovante próprio de que o apontamento foi registrado, e a instituição não consegue fazê-lo desaparecer.",
   },
   {
     icon: FileWarning,
@@ -168,9 +169,9 @@ function Home() {
               </h1>
 
               <p className="mt-6 max-w-xl text-lg leading-relaxed text-foreground/80">
-                O SIS certifica escolas, creches, clínicas, clubes, parques e projetos sociais
-                quanto à segurança e à adequação do ambiente para crianças e adolescentes — e
-                publica esse histórico de forma aberta e auditável.
+                O SIS certifica escolas, creches, clínicas, clubes, parques, cursos e projetos
+                sociais quanto à segurança e à adequação do ambiente para crianças e adolescentes,
+                e publica esse histórico de forma aberta e auditável.
               </p>
 
               <p className="mt-4 max-w-xl leading-relaxed text-muted-foreground">
@@ -199,16 +200,25 @@ function Home() {
                   { k: "3 níveis", v: "Bronze, Prata e Ouro" },
                 ].map((s) => (
                   <div key={s.k}>
-                    <dt className="font-serif text-xl font-bold text-primary">{s.k}</dt>
+                    <dt className="text-xl font-bold text-primary">{s.k}</dt>
                     <dd className="mt-0.5 text-xs leading-snug text-muted-foreground">{s.v}</dd>
                   </div>
                 ))}
               </dl>
             </div>
 
-            {/* TODO(foto): trocar por fotografia — ver public/imagens/README.md */}
             <div className="relative">
-              <CenaInstituicao className="w-full rounded-xl border bg-card shadow-sm" />
+              {/* Elemento de LCP da home: carrega com prioridade, nunca lazy.
+                  Sem rosto identificável, conforme public/imagens/README.md. */}
+              <img
+                src="/imagens/hero-instituicao.webp"
+                alt="Uma responsável e duas crianças de uniforme, vistos de costas, entram pelo portão de uma escola infantil arborizada. À esquerda, uma rampa de acessibilidade com corrimão dá acesso à entrada."
+                className="w-full rounded-xl border bg-card object-cover shadow-sm"
+                width={1448}
+                height={1086}
+                loading="eager"
+                fetchPriority="high"
+              />
             </div>
           </div>
         </section>
@@ -279,9 +289,9 @@ function Home() {
 
             {/* Os seis eixos avaliados. */}
             <div className="mt-12 rounded-lg border bg-card p-7 sm:p-9">
-              <h3 className="font-serif text-xl font-bold text-primary">Os seis eixos avaliados</h3>
+              <h3 className="text-xl font-bold text-primary">Os seis eixos avaliados</h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                Cada eixo recebe uma nota de 0 a 100, sempre ancorada em norma já existente — a
+                Cada eixo recebe uma nota de 0 a 100, sempre ancorada em norma já existente: a
                 plataforma não inventa exigência nova.
               </p>
               <ul className="mt-7 grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -302,7 +312,7 @@ function Home() {
             eyebrow="Os selos"
             icon={ShieldCheck}
             title="Um selo que incentiva evolução, não só aprovação"
-            description="O nível reflete a pontuação obtida. Como a certificação vale 12 meses e exige nova avaliação, a instituição precisa sustentar o padrão ao longo do tempo — e pode subir de nível a cada ciclo."
+            description="O nível reflete a pontuação obtida. Como a certificação vale 12 meses e exige nova avaliação, a instituição precisa sustentar o padrão ao longo do tempo, e pode subir de nível a cada ciclo."
           />
 
           <div className="mt-14 grid gap-6 md:grid-cols-3">
@@ -311,8 +321,8 @@ function Home() {
                 key={n.nivel}
                 className="flex flex-col items-center rounded-lg border bg-card p-8 text-center"
               >
-                <Seal nivel={n.nivel} className="size-24" />
-                <h3 className="mt-5 font-serif text-xl font-bold text-primary">Selo {n.nivel}</h3>
+                <Seal nivel={n.nivel} className="size-40" />
+                <h3 className="mt-5 text-xl font-bold text-primary">Selo {n.nivel}</h3>
                 <p className="mt-1 text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
                   {n.faixa}
                 </p>
@@ -325,18 +335,21 @@ function Home() {
             <div className="flex items-start gap-3">
               <Accessibility className="mt-0.5 size-6 shrink-0 text-brand-amber" aria-hidden />
               <div>
-                <h3 className="font-serif text-xl font-bold text-primary">Subselos temáticos</h3>
+                <h3 className="text-xl font-bold text-primary">Subselos temáticos</h3>
                 <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
                   Além do nível principal, a instituição pode conquistar reconhecimentos específicos
-                  por boas práticas — especialmente em inclusão e acessibilidade.
+                  por boas práticas, especialmente em inclusão e acessibilidade.
                 </p>
               </div>
             </div>
             <ul className="mt-7 grid gap-5 sm:grid-cols-2">
               {subselos.map((s) => (
-                <li key={s.nome} className="rounded-md border bg-card p-5">
-                  <p className="font-semibold text-foreground">{s.nome}</p>
-                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{s.desc}</p>
+                <li key={s.nome} className="flex items-start gap-4 rounded-md border bg-card p-5">
+                  <SubseloBadge nome={s.nome} size={64} decorativa />
+                  <div>
+                    <p className="font-semibold text-foreground">{s.nome}</p>
+                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{s.desc}</p>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -406,7 +419,7 @@ function Home() {
                   key={n.sigla}
                   className="rounded-lg border border-primary-foreground/15 bg-primary-foreground/[0.06] p-6"
                 >
-                  <p className="font-serif text-lg font-bold text-brand-star">{n.sigla}</p>
+                  <p className="text-lg font-bold text-brand-star">{n.sigla}</p>
                   <p className="mt-1 text-sm font-semibold">{n.nome}</p>
                   <p className="mt-2 text-sm leading-relaxed text-primary-foreground/70">
                     {n.desc}
@@ -423,7 +436,7 @@ function Home() {
             eyebrow="Por que blockchain"
             icon={Blocks}
             title="Confiança precisa ser verificável, não prometida"
-            description="A tecnologia aqui não é enfeite: ela resolve um problema concreto de quem fiscaliza — garantir que o histórico de uma instituição não possa ser convenientemente reescrito."
+            description="A tecnologia aqui não é enfeite; ela resolve um problema concreto de quem fiscaliza: garantir que o histórico de uma instituição não possa ser convenientemente reescrito."
           />
 
           <div className="mt-14 grid gap-6 md:grid-cols-3">
@@ -443,7 +456,7 @@ function Home() {
             </p>
             <ol className="mt-5 space-y-1">
               {[
-                { n: "#10521", t: "Certificação emitida — nível Ouro", h: "0x8f2a…c41d" },
+                { n: "#10521", t: "Certificação emitida (nível Ouro)", h: "0x8f2a…c41d" },
                 { n: "#10612", t: "Denúncia registrada de forma anônima", h: "0xbe45…2a09" },
                 { n: "#10688", t: "Denúncia apurada e resultado publicado", h: "0x71c8…40ab" },
               ].map((b, i, arr) => (
@@ -510,7 +523,7 @@ function Home() {
             {[
               {
                 t: "Nenhuma lei obriga a contratar certificação",
-                d: "Nenhum selo de proteção infantil é obrigatório no Brasil. A legislação cria dever de agir e de comunicar, não dever de comprar. Somos uma forma de cumprir e comprovar esse dever — não a única.",
+                d: "Nenhum selo de proteção infantil é obrigatório no Brasil. A legislação cria dever de agir e de comunicar, não dever de comprar. Somos uma forma de cumprir e comprovar esse dever, mas não a única.",
               },
               {
                 t: "O modelo jurídico ainda está em validação",

@@ -1,11 +1,26 @@
 /*
- * Tipografia institucional, self-hosted (sem CDN em runtime).
- * Source Serif 4 nos títulos + Source Sans 3 no corpo — o par clássico de
- * relatório oficial / fundação, escolhido para afastar a identidade da
- * estética de SaaS e aproximá-la de um portal público.
+ * Tipografia oficial do gov.br, self-hosted (sem CDN em runtime).
+ *
+ * O Design System do governo (@govbr-ds/core) define uma família ÚNICA:
+ *   --font-family-base: Rawline, Raleway, sans-serif
+ *
+ * Ou seja: Rawline em tudo, com Raleway apenas como fallback — a Rawline é
+ * derivada da Raleway (mesma linhagem, ambas OFL-1.1), então a degradação é
+ * quase imperceptível. Não existe serifa em nenhum nível do gov.br: toda a
+ * hierarquia é construída por PESO, não por contraste de família.
+ *
+ * Rawline: Henrique Ibaldo, OFL-1.1 — via `rawline-webfont` (não está no
+ * Google Fonts nem no Fontsource oficial). Carregamos só o subset `latin`,
+ * que já cobre todos os acentos do português.
  */
-@import "@fontsource-variable/source-serif-4/index.css";
-@import "@fontsource-variable/source-sans-3/index.css";
+@import "rawline-webfont/latin-400.css";
+@import "rawline-webfont/latin-500.css";
+@import "rawline-webfont/latin-600.css";
+@import "rawline-webfont/latin-700.css";
+/* Fallback do DSGov. Todos os subsets vêm num arquivo só, mas o unicode-range
+   garante que o browser só busque o latino — e, na prática, nem isso, já que a
+   Rawline acima cobre tudo. */
+@import "@fontsource-variable/raleway/index.css";
 
 @import "tailwindcss" source(none);
 @source "../src";
@@ -45,8 +60,11 @@
  */
 
 @theme inline {
-  --font-sans: "Source Sans 3 Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Source Serif 4 Variable", ui-serif, Georgia, serif;
+  /* A pilha exata do DSGov. Raleway é fallback, não uma segunda família. */
+  --font-sans: "Rawline", "Raleway Variable", ui-sans-serif, system-ui, sans-serif;
+  /* O gov.br não tem serifa. O token existe só para que um `font-serif`
+     esquecido em algum componente não caia num Georgia genérico. */
+  --font-serif: var(--font-sans);
   --color-brand-navy: var(--brand-navy);
   --color-brand-navy-deep: var(--brand-navy-deep);
   --color-brand-teal: var(--brand-teal);
@@ -240,12 +258,12 @@
     text-rendering: optimizeLegibility;
   }
 
-  /* Títulos em serifa: a decisão tipográfica que mais afasta o site da
-     estética de template e o aproxima de publicação institucional. */
+  /* Títulos herdam a Rawline do body — como no gov.br, a hierarquia vem do
+     peso. Mantemos só o ajuste ótico: a Rawline é uma geométrica de caixa
+     alta larga, e sem o aperto ela abre demais em corpo grande. */
   h1,
   h2,
   h3 {
-    font-family: var(--font-serif);
     letter-spacing: -0.015em;
     text-wrap: balance;
   }

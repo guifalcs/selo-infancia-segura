@@ -63,7 +63,7 @@ export function SiteHeader() {
 
       <header className="sticky top-0 z-40 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/85">
         <div className="mx-auto flex h-[4.5rem] max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-          <Link to="/" aria-label="SIS — Selo Infância Segura, página inicial">
+          <Link to="/" aria-label="SIS: Selo Infância Segura, página inicial">
             <BrandLockup />
           </Link>
 
