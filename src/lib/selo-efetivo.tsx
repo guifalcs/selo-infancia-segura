@@ -2,12 +2,15 @@ import { useMemo } from "react";
 
 import { useCatalogo, type Emissao } from "@/lib/certificacoes-store";
 import {
+  apuracaoDaInstituicao,
   certificacaoDaInstituicao,
   hashDemo,
   modeloPorId,
   nivelDaInstituicao,
   nivelSugerido,
+  planoDeAdequacao,
   pontuacaoDaInstituicao,
+  proximoNivel,
   registros as registrosDaBase,
   registrosDaInstituicao,
   registrosPublicosDaInstituicao,
@@ -16,6 +19,8 @@ import {
   type Certificacao,
   type Criterio,
   type Institution,
+  type ItemPlano,
+  type ModeloCertificacao,
   type Nivel,
   type RegistroBlockchain,
   type ResumoDoConjunto,
@@ -60,18 +65,31 @@ export type Selo = {
   certificacao: (inst: Institution) => Certificacao | null;
   /** Nível que a régua sugere para uma nota apurada sem selo emitido. */
   sugerido: (inst: Institution) => Nivel | null;
+  /** Modelo sob o qual o selo vigente foi apurado. */
+  modelo: (inst: Institution) => ModeloCertificacao | null;
+  /** Plano de adequação, sobre as notas do selo vigente. */
+  plano: (inst: Institution) => ItemPlano[];
+  /** Próximo nível a alcançar, na régua do modelo do selo vigente. */
+  proximoNivel: (inst: Institution) => ReturnType<typeof proximoNivel>;
   /** Histórico completo na cadeia, do mais recente ao mais antigo. */
   registros: (inst: Institution) => RegistroBlockchain[];
   /** Histórico visível na consulta pública. */
   registrosPublicos: (inst: Institution) => RegistroBlockchain[];
+  /**
+   * Cadeia de um conjunto de instituições, do bloco mais novo ao mais antigo.
+   *
+   * O livro de registros lia a base direto e por isso não mostrava a emissão
+   * feita na demonstração: a unidade via o bloco novo no painel, clicava em
+   * "ver tudo" e ele não estava lá.
+   */
+  registrosDoConjunto: (lista: Institution[]) => RegistroBlockchain[];
   /** Emissão feita nesta sessão, quando houver. */
   emissao: (inst: Institution) => Emissao | null;
   /** Alguma emissão foi feita nesta sessão? Usado para avisar o avaliador. */
   temEmissaoDaSessao: boolean;
 };
 
-function certificacaoDaEmissao(e: Emissao): Certificacao {
-  const modelo = modeloPorId.get(e.modeloId);
+function certificacaoDaEmissao(e: Emissao, modelo: ModeloCertificacao | null): Certificacao {
   const temporal = situacaoDaValidade(e.validade);
 
   return {
@@ -136,7 +154,7 @@ function registrosDaEmissao(e: Emissao, deslocamento: number): RegistroBlockchai
 }
 
 export function useSelo(): Selo {
-  const { emissoes, emissaoDaInstituicao } = useCatalogo();
+  const { modelos, emissoes, emissaoDaInstituicao } = useCatalogo();
 
   return useMemo(() => {
     // Deslocamento de bloco por emissão: a primeira da sessão continua a cadeia
@@ -150,14 +168,26 @@ export function useSelo(): Selo {
 
     const emissaoDe = (inst: Institution) => emissaoDaInstituicao(inst.id);
 
+    /* O catálogo vivo vem primeiro: um modelo criado durante a demonstração não
+       está em `modeloPorId`, e procurar só ali fazia a emissão perder os eixos
+       (ficha pública sem nota nenhuma) e exibir o id cru no lugar da sigla. */
+    const modeloDaEmissao = (e: Emissao) =>
+      modelos.find((m) => m.id === e.modeloId) ?? modeloPorId.get(e.modeloId) ?? null;
+
     const criteriosDaEmissao = (e: Emissao): Criterio[] => {
-      const modelo = modeloPorId.get(e.modeloId);
+      const modelo = modeloDaEmissao(e);
       if (!modelo) return [];
       return modelo.eixos.map((eixo) => ({
         nome: eixo.nome,
         nota: e.notas[eixo.nome] ?? 0,
         base: eixo.base,
       }));
+    };
+
+    /** Modelo que responde pelo selo vigente: o da emissão, ou o da base. */
+    const modeloDe = (inst: Institution) => {
+      const e = emissaoDe(inst);
+      return e ? modeloDaEmissao(e) : (apuracaoDaInstituicao(inst.id)?.modelo ?? null);
     };
 
     return {
@@ -173,9 +203,26 @@ export function useSelo(): Selo {
       ultimaAvaliacao: (inst) => emissaoDe(inst)?.emissao ?? inst.ultimaAvaliacao,
       certificacao: (inst) => {
         const e = emissaoDe(inst);
-        return e ? certificacaoDaEmissao(e) : certificacaoDaInstituicao(inst.id);
+        return e
+          ? certificacaoDaEmissao(e, modeloDaEmissao(e))
+          : certificacaoDaInstituicao(inst.id);
       },
       sugerido: (inst) => (emissaoDe(inst) ? null : nivelSugerido(inst.id)),
+      modelo: modeloDe,
+      plano: (inst) => {
+        const e = emissaoDe(inst);
+        const modelo = e ? modeloDaEmissao(e) : null;
+        // Só desvia da base quando há emissão E modelo: o plano precisa das
+        // notas e do piso da mesma régua, nunca de uma metade de cada.
+        return e && modelo
+          ? planoDeAdequacao(inst, { criterios: criteriosDaEmissao(e), modelo })
+          : planoDeAdequacao(inst);
+      },
+      proximoNivel: (inst) => {
+        const e = emissaoDe(inst);
+        const modelo = e ? modeloDaEmissao(e) : null;
+        return e && modelo ? proximoNivel(inst, { nota: e.pontuacao, modelo }) : proximoNivel(inst);
+      },
       registros: (inst) => {
         const e = emissaoDe(inst);
         const daBase = registrosDaInstituicao(inst.id);
@@ -186,10 +233,22 @@ export function useSelo(): Selo {
         const daBase = registrosPublicosDaInstituicao(inst.id);
         return e ? [...registrosDaEmissao(e, deslocamentos.get(e.id) ?? 0), ...daBase] : daBase;
       },
+      registrosDoConjunto: (lista) => {
+        const ids = new Set(lista.map((i) => i.id));
+        const daSessao = lista
+          .map(emissaoDe)
+          .filter((e): e is Emissao => e !== null)
+          .flatMap((e) => registrosDaEmissao(e, deslocamentos.get(e.id) ?? 0))
+          // Bloco maior é evento mais novo: mesma ordem que a base já entrega,
+          // então as duas listas se emendam sem reordenar o livro inteiro.
+          .sort((a, b) => Number(b.bloco.slice(1)) - Number(a.bloco.slice(1)));
+
+        return [...daSessao, ...registrosDaBase.filter((r) => ids.has(r.instituicaoId))];
+      },
       emissao: (inst) => emissaoDe(inst),
       temEmissaoDaSessao: emissoes.length > 0,
     };
-  }, [emissoes, emissaoDaInstituicao]);
+  }, [modelos, emissoes, emissaoDaInstituicao]);
 }
 
 /**
@@ -219,6 +278,11 @@ export function useResumoComEmissoes(lista: Institution[], base: ResumoDoConjunt
       aguardandoEmissao: lista.filter((i) => selo.status(i) === "Aguardando emissão").length,
       emAvaliacao: lista.filter((i) => selo.status(i) === "Em avaliação").length,
       pendentes: lista.filter((i) => selo.status(i) === "Pendente").length,
+      /* Recontado junto com os outros estágios: deixar `suspensas` vindo da base
+         permitia que a mesma instituição fosse contada como certificada e como
+         suspensa, e as barras de "situação das instituições" somavam mais que o
+         total do escopo. Os cinco estágios têm de fechar em `total`. */
+      suspensas: lista.filter((i) => selo.status(i) === "Suspensa").length,
       porNivel: { Ouro: conta("Ouro"), Prata: conta("Prata"), Bronze: conta("Bronze") },
       subselos: vigentes.reduce((s, i) => s + selo.subselos(i).length, 0),
     };

@@ -12,7 +12,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { avaliacoesAssinadas, avaliacoesEmAberto, avaliadores } from "@/lib/mock-data";
+import {
+  avaliacaoAssinada,
+  avaliacoes,
+  avaliacoesAssinadas,
+  avaliacoesEmAberto,
+  avaliadores,
+  ordemPorData,
+} from "@/lib/mock-data";
 
 export const Route = createFileRoute("/portal/avaliadores")({
   head: () => ({
@@ -36,6 +43,11 @@ function Avaliadores() {
   // divergiria do histórico na primeira mudança de cenário — antes somava 96
   // assinaturas para uma base de 15 instituições.
   const totalAvaliacoes = avaliadores.reduce((s, a) => s + avaliacoesAssinadas(a.nome), 0);
+  /* A data de início também sai do histórico. Fixada no texto ela dizia "desde
+     agosto de 2025" enquanto a primeira avaliação assinada da base é de março. */
+  const primeiraAssinada = avaliacoes
+    .filter(avaliacaoAssinada)
+    .sort((a, b) => ordemPorData(a.data) - ordemPorData(b.data))[0];
 
   return (
     <PortalLayout
@@ -62,12 +74,18 @@ function Avaliadores() {
             icon={ClipboardCheck}
             label="Avaliações assinadas"
             valor={totalAvaliacoes}
-            detalhe="Nesta plataforma, desde agosto de 2025"
+            detalhe={
+              primeiraAssinada
+                ? `Nesta plataforma, desde ${primeiraAssinada.data}`
+                : "Nenhuma avaliação fechada ainda"
+            }
           />
+          {/* Só os credenciados ativos: contar a UF de quem está inativo ou em
+              formação afirmaria cobertura que ninguém consegue atender hoje. */}
           <Indicador
             icon={MapPin}
             label="Estados cobertos"
-            valor={new Set(avaliadores.flatMap((a) => a.ufs)).size}
+            valor={new Set(ativos.flatMap((a) => a.ufs)).size}
             detalhe="UFs com credenciamento regional ativo"
             tom="teal"
           />

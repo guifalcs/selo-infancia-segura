@@ -137,9 +137,14 @@ function Denuncia() {
             </nav>
 
             <h1 className="mt-4 text-3xl font-bold text-primary sm:text-4xl">Canal de denúncia</h1>
+            {/* O relato entra na cadeia, não na vitrine. Dizer "histórico
+                público" aqui contradizia o quarto card ao lado, a ficha pública
+                e a fila do portal — todos afirmam o contrário. */}
             <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
               Registre de forma anônima uma irregularidade observada em instituição participante. O
-              apontamento passa a fazer parte do histórico público e auditável da instituição.
+              relato é gravado na cadeia da instituição no momento do envio, com bloco e hash
+              próprios, e você recebe um protocolo na hora. A apuração corre no portal do SIS: nada
+              do relato aparece na ficha pública da instituição.
             </p>
           </div>
         </div>

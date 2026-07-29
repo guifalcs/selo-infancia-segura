@@ -45,10 +45,8 @@ import {
   mediaPorEixo,
   nivelSugerido,
   PATAMAR_DE_REFERENCIA,
-  planoDeAdequacao,
   pontuacaoDaInstituicao,
   redes,
-  registros,
   renovacoesProximas,
   resumoDoConjunto,
   type Institution,
@@ -110,7 +108,7 @@ function PainelDaUnidade({ escopo, selo }: { escopo: Escopo; selo: Selo }) {
   const nota = selo.pontuacao(inst);
   const validade = selo.validade(inst);
   const situacao = selo.status(inst);
-  const plano = planoDeAdequacao(inst);
+  const plano = selo.plano(inst);
   const minhasDenuncias = denunciasDaInstituicao(inst.id);
   const abertas = minhasDenuncias.filter(denunciaEmAberto);
   const atrasadas = minhasDenuncias.filter(denunciaAtrasada);
@@ -421,7 +419,7 @@ function LinhaDeUnidade({
 function PainelDaRede({ escopo, selo }: { escopo: Escopo; selo: Selo }) {
   const unidades = escopo.instituicoes;
   const resumo = useResumoComEmissoes(unidades, resumoDoConjunto(unidades));
-  const eixosDaRede = mediaPorEixo(unidades).filter((e) => e.media !== null);
+  const eixosDaRede = mediaPorEixo(unidades, selo.criterios).filter((e) => e.media !== null);
   const maisFraco = [...eixosDaRede].sort((a, b) => (a.media ?? 0) - (b.media ?? 0))[0];
   const comAcesso = unidades.filter((u) => u.acessoProprio).length;
   const ids = new Set(unidades.map((u) => u.id));
@@ -596,7 +594,7 @@ function PainelDoSIS({ escopo, selo }: { escopo: Escopo; selo: Selo }) {
   const resumo = useResumoComEmissoes(todas, resumoDoConjunto(todas));
   const filaDeEmissao = todas.filter((i) => selo.status(i) === "Aguardando emissão");
   const semAvaliacao = todas.filter((i) => selo.status(i) === "Pendente");
-  const ultimosRegistros = registros.slice(0, 6);
+  const ultimosRegistros = selo.registrosDoConjunto(todas).slice(0, 6);
   const renovacoes = renovacoesProximas(todas).filter(
     (c) => c.status === "A vencer" || c.status === "Vencida",
   );

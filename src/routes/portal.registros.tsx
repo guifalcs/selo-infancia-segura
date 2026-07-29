@@ -22,8 +22,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { institutionPorId, registros, type RegistroBlockchain } from "@/lib/mock-data";
+import { institutionPorId, type RegistroBlockchain } from "@/lib/mock-data";
 import type { Escopo } from "@/lib/portal-access";
+import { useSelo } from "@/lib/selo-efetivo";
 
 export const Route = createFileRoute("/portal/registros")({
   head: () => ({
@@ -170,10 +171,12 @@ function Registros() {
 }
 
 function Livro({ escopo }: { escopo: Escopo }) {
+  const selo = useSelo();
   const [tipo, setTipo] = useState<(typeof tipos)[number]>("todos");
   const [pagina, setPagina] = useState(1);
-  const ids = new Set(escopo.instituicoes.map((i) => i.id));
-  const doEscopo = registros.filter((r) => ids.has(r.instituicaoId));
+  /* Pelo selo efetivo, e não pela base: um selo emitido na demonstração gera
+     bloco, e o livro é justamente onde alguém vai conferir se ele existe. */
+  const doEscopo = selo.registrosDoConjunto(escopo.instituicoes);
   const lista = tipo === "todos" ? doEscopo : doEscopo.filter((r) => r.tipo === tipo);
 
   const certificacoesRegistradas = doEscopo.filter(

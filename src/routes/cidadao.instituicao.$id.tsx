@@ -18,7 +18,6 @@ import { Seal } from "@/components/Seal";
 import { ValidadeBadge } from "@/components/PortalUI";
 import { Button } from "@/components/ui/button";
 import {
-  apuracaoDaInstituicao,
   institutionPorId,
   institutions,
   PATAMAR_DE_REFERENCIA,
@@ -82,7 +81,9 @@ function Ficha() {
   const criterios = selo.criterios(inst);
   const subselosDaUnidade = selo.subselos(inst);
   const cert = selo.certificacao(inst);
-  const modelo = apuracaoDaInstituicao(inst.id)?.modelo;
+  // Modelo do selo vigente, não o da base: a régua citada aqui tem de ser a
+  // mesma sob a qual as notas ao lado foram apuradas.
+  const modelo = selo.modelo(inst);
   const piso = modelo?.notaMinimaPorEixo ?? 60;
 
   /** Mesma régua do plano de adequação, agora ciente do piso do modelo. */

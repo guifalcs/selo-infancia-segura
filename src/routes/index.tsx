@@ -126,8 +126,10 @@ const paraQuem = [
   {
     icon: Users,
     titulo: "Para famílias",
+    /* "Ocorrências registradas" sugeria denúncia na vitrine, que é justamente o
+       que a ficha pública não exibe. O que ela mostra é a decisão. */
     texto:
-      "Consulta gratuita e aberta do histórico de qualquer instituição participante, com nível do selo, eixos avaliados e ocorrências registradas.",
+      "Consulta gratuita e aberta do histórico de qualquer instituição participante, com nível do selo, eixos avaliados, validade e a cadeia de emissões, renovações e suspensões.",
     acao: { label: "Consultar instituição", to: "/cidadao/consulta" as const },
   },
   {

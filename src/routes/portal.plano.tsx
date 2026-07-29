@@ -19,14 +19,7 @@ import {
 } from "@/components/PortalUI";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  apuracaoDaInstituicao,
-  denunciasDaInstituicao,
-  niveis,
-  PATAMAR_DE_REFERENCIA,
-  planoDeAdequacao,
-  proximoNivel,
-} from "@/lib/mock-data";
+import { denunciasDaInstituicao, niveis, PATAMAR_DE_REFERENCIA } from "@/lib/mock-data";
 import type { Escopo } from "@/lib/portal-access";
 import { useSelo } from "@/lib/selo-efetivo";
 
@@ -65,8 +58,11 @@ function Conteudo({ escopo }: { escopo: Escopo }) {
   const inst = escopo.instituicao;
   if (!inst) return <Vazio>Nenhuma instituição vinculada a este acesso.</Vazio>;
 
-  const itens = planoDeAdequacao(inst);
-  const meta = proximoNivel(inst);
+  /* Plano, meta e modelo saem todos do selo efetivo: com uma emissão feita na
+     demonstração, ler as ações da base e as notas do overlay fazia a tela
+     listar um eixo como pendente e exibir, na mesma linha, a nota já resolvida. */
+  const itens = selo.plano(inst);
+  const meta = selo.proximoNivel(inst);
   const emAndamento = itens.filter((i) => i.status === "Em andamento").length;
   const eliminatorios = itens.filter((i) => i.eliminatorio);
   const denunciasProcedentes = denunciasDaInstituicao(inst.id).filter(
@@ -76,7 +72,7 @@ function Conteudo({ escopo }: { escopo: Escopo }) {
   const validade = selo.validade(inst);
   const criterios = selo.criterios(inst);
   const faixaAtual = niveis.find((n) => n.nivel === nivel);
-  const modelo = apuracaoDaInstituicao(inst.id)?.modelo;
+  const modelo = selo.modelo(inst);
 
   return (
     <div className="space-y-6">

@@ -9,6 +9,7 @@ import {
 } from "react";
 
 import {
+  certificacoes,
   hashDemo,
   modelosIniciais,
   resultadoDaAvaliacao,
@@ -116,6 +117,26 @@ const idDeModelo = (codigo: string, existentes: ModeloCertificacao[]) => {
 
 type Salvo = { modelos: ModeloCertificacao[]; emissoes: Emissao[] };
 
+/**
+ * Próximo sequencial do token, dentro da sigla do modelo e do ano.
+ *
+ * Conta as certificações que a base já emitiu, não só as da sessão. Um contador
+ * cego para a base devolvia `0001` para uma sigla que já tinha oito selos
+ * registrados, e o token repetido é o pior lugar possível para uma colisão: é
+ * exatamente o número que a família usa para saber de qual selo se trata.
+ *
+ * A chave é sigla + ano, e não o id do modelo, porque duas versões (ou dois
+ * modelos com o mesmo código) compartilham o mesmo prefixo de token.
+ */
+function proximoSequencial(codigo: string, ano: string, emissoes: Emissao[]) {
+  const prefixo = `${codigo}-${ano}-`;
+  const naBase = certificacoes
+    .filter((c) => c.token.startsWith(prefixo))
+    .reduce((maior, c) => Math.max(maior, Number(c.token.slice(prefixo.length)) || 0), 0);
+  const naSessao = emissoes.filter((e) => e.token.startsWith(prefixo)).length;
+  return String(naBase + naSessao + 1).padStart(4, "0");
+}
+
 export function CatalogoProvider({ children }: { children: ReactNode }) {
   const [modelos, setModelos] = useState<ModeloCertificacao[]>(modelosIniciais);
   const [emissoes, setEmissoes] = useState<Emissao[]>([]);
@@ -216,10 +237,9 @@ export function CatalogoProvider({ children }: { children: ReactNode }) {
         const pontuacao = apuracao.nota;
         const nivel = apuracao.nivel;
         const data = hoje();
-        const sequencial = String(
-          emissoes.filter((e) => e.modeloId === modelo.id).length + 1,
-        ).padStart(4, "0");
-        const token = `${modelo.codigo}-${data.slice(6)}-${sequencial}`;
+        const ano = data.slice(6);
+        const sequencial = proximoSequencial(modelo.codigo, ano, emissoes);
+        const token = `${modelo.codigo}-${ano}-${sequencial}`;
 
         const emissao: Emissao = {
           id: `emi-${modelo.id}-${dados.instituicaoId}-${sequencial}`,

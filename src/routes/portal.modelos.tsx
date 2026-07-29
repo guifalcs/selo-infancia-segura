@@ -586,12 +586,22 @@ function DialogoDeAtribuicao({
   const nota = apuracao.nota;
   const nivel = apuracao.nivel;
 
-  /* Uma instituição com selo vigente não recebe segunda emissão: dois selos
-     válidos ao mesmo tempo tornariam ambíguo qual deles a família está
-     consultando. Para trocar, é renovação ou reavaliação extraordinária. */
-  const seloVigente = inst && selo.status(inst) === "Certificada" ? selo.certificacao(inst) : null;
+  /* Uma instituição que já tem certificação na cadeia não recebe emissão nova
+     por aqui, e por dois motivos distintos:
+       · selo vigente — dois selos válidos ao mesmo tempo tornariam ambíguo qual
+         deles a família está consultando;
+       · selo suspenso — a suspensão é levantada por nova avaliação completa, não
+         por uma emissão avulsa do catálogo. Emitir em cima dela apagaria a
+         cassação da tabela de certificações e faria a mesma unidade contar como
+         certificada e suspensa no consolidado.
+     Nos dois casos o caminho é renovação ou avaliação extraordinária. */
+  const situacao = inst ? selo.status(inst) : null;
+  const impedimento =
+    inst && (situacao === "Certificada" || situacao === "Suspensa")
+      ? { certificacao: selo.certificacao(inst), suspensa: situacao === "Suspensa" }
+      : null;
 
-  const podeEmitir = Boolean(inst) && Boolean(avaliador) && nivel !== null && !seloVigente;
+  const podeEmitir = Boolean(inst) && Boolean(avaliador) && nivel !== null && !impedimento;
 
   const limpar = () => {
     setInstituicaoId("");
@@ -768,17 +778,34 @@ function DialogoDeAtribuicao({
 
             {/* Bloqueio de emissão duplicada, explicado no lugar onde a pessoa
                 tentaria fazê-la. */}
-            {seloVigente && (
+            {impedimento && (
               <div className="rounded-lg border border-brand-amber/40 bg-brand-amber/10 p-4 text-sm">
                 <p className="flex items-center gap-2 font-semibold text-brand-amber">
-                  <AlertTriangle className="size-4" aria-hidden /> Esta instituição já tem selo
-                  vigente
+                  <AlertTriangle className="size-4" aria-hidden />{" "}
+                  {impedimento.suspensa
+                    ? "Esta instituição está com o selo suspenso"
+                    : "Esta instituição já tem selo vigente"}
                 </p>
                 <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                  {inst?.nome} tem o token {seloVigente.token} válido até {seloVigente.validade}.
-                  Dois selos válidos ao mesmo tempo tornariam ambíguo qual deles a família está
-                  consultando. Para substituí-lo, abra uma renovação ou uma avaliação
-                  extraordinária.
+                  {impedimento.suspensa ? (
+                    <>
+                      A certificação de {inst?.nome}
+                      {impedimento.certificacao
+                        ? ` (token ${impedimento.certificacao.token})`
+                        : ""}{" "}
+                      foi cassada após apuração de denúncia. A suspensão só é levantada por nova
+                      avaliação completa, não por uma emissão avulsa do catálogo: abra uma avaliação
+                      extraordinária e emita a partir dela, para que a cassação continue no
+                      histórico em vez de desaparecer sob um selo novo.
+                    </>
+                  ) : (
+                    <>
+                      {inst?.nome} tem o token {impedimento.certificacao?.token} válido até{" "}
+                      {impedimento.certificacao?.validade}. Dois selos válidos ao mesmo tempo
+                      tornariam ambíguo qual deles a família está consultando. Para substituí-lo,
+                      abra uma renovação ou uma avaliação extraordinária.
+                    </>
+                  )}
                 </p>
               </div>
             )}

@@ -51,7 +51,7 @@ function Consolidado({ escopo }: { escopo: Escopo }) {
   const selo = useSelo();
   const lista = escopo.instituicoes;
   const resumo = useResumoComEmissoes(lista, resumoDoConjunto(lista));
-  const eixosDoEscopo = mediaPorEixo(lista).filter((e) => e.media !== null);
+  const eixosDoEscopo = mediaPorEixo(lista, selo.criterios).filter((e) => e.media !== null);
   const ids = new Set(lista.map((i) => i.id));
   const doEscopo = denuncias.filter((d) => ids.has(d.instituicaoId));
   const procedentes = doEscopo.filter((d) => d.status === "Procedente").length;

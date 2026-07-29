@@ -845,7 +845,17 @@ export const modelosIniciais: ModeloCertificacao[] = [
       "Relação nominal de monitores com formação e certidões negativas",
       "Controle de entrada e saída com identificação do responsável",
     ],
-    subselosElegiveis: ["Acessibilidade", "Inclusão TEA", "Prevenção ao Bullying"],
+    /* Segurança Digital entra aqui porque projeto social de contraturno também
+       roda oficina de inclusão digital e guarda dado de menor — o eixo LGPD
+       existe neste modelo, ainda que com peso baixo. Sem ele, o Centro
+       Educacional Renascer exibiria um subselo que o próprio modelo não teria
+       como conceder, e a tela de emissão o descartaria na primeira renovação. */
+    subselosElegiveis: [
+      "Acessibilidade",
+      "Inclusão TEA",
+      "Prevenção ao Bullying",
+      "Segurança Digital",
+    ],
     status: "Ativo",
     criadoEm: "05/03/2026",
     criadoPor: "Ana Ribeiro",
@@ -1376,9 +1386,20 @@ export const avaliacoes: Avaliacao[] = [
 export const avaliacoesDaInstituicao = (instituicaoId: string) =>
   avaliacoes.filter((a) => a.instituicaoId === instituicaoId);
 
+/**
+ * Avaliação fechada e assinada pelo profissional.
+ *
+ * Só conta o que produziu resultado — aprovação com nota ou reprovação. Visita
+ * em andamento não está assinada: ela ainda aparece em "em aberto", e contá-la
+ * nas duas colunas fazia a mesma visita ser exibida como trabalho concluído e
+ * trabalho pendente na mesma linha da tabela.
+ */
+export const avaliacaoAssinada = (a: Avaliacao) =>
+  a.status === "Aprovada" || a.status === "Reprovada";
+
 /** Avaliações que o profissional já assinou na plataforma. */
 export const avaliacoesAssinadas = (nome: string) =>
-  avaliacoes.filter((a) => a.avaliador === nome && a.status !== "Agendada").length;
+  avaliacoes.filter((a) => a.avaliador === nome && avaliacaoAssinada(a)).length;
 
 /** Visitas ainda abertas na mão do profissional. */
 export const avaliacoesEmAberto = (nome: string) =>
@@ -2220,17 +2241,27 @@ const acaoPorEixo: Record<string, string> = {
 };
 
 /**
+ * Notas e modelo que sustentam o selo vigente.
+ *
+ * Existe para que o plano e a meta de nível possam ser calculados sobre uma
+ * emissão feita durante a demonstração, e não sobre a avaliação que ela
+ * substituiu. Sem isto, a tela listava um eixo como "abaixo do patamar" usando
+ * a nota antiga e exibia ao lado a nota nova, já resolvida.
+ */
+export type BaseDaApuracao = { criterios: Criterio[]; modelo: ModeloCertificacao };
+
+/**
  * Plano de adequação da instituição.
  *
  * Derivado das notas: todo eixo abaixo do patamar de referência entra com uma
  * ação recomendada. O prazo é proporcional à distância do patamar — quanto
  * menor a nota, mais curto o prazo, porque é onde o risco à criança é maior.
  */
-export const planoDeAdequacao = (inst: Institution): ItemPlano[] => {
-  const modelo = apuracoes.get(inst.id)?.modelo;
+export const planoDeAdequacao = (inst: Institution, efetivo?: BaseDaApuracao): ItemPlano[] => {
+  const modelo = efetivo?.modelo ?? apuracoes.get(inst.id)?.modelo;
   const piso = modelo?.notaMinimaPorEixo ?? 60;
 
-  return inst.criterios
+  return (efetivo?.criterios ?? inst.criterios)
     .filter((c) => c.nota < PATAMAR_DE_REFERENCIA)
     .sort((a, b) => a.nota - b.nota)
     .map((c) => ({
@@ -2251,16 +2282,19 @@ export const planoDeAdequacao = (inst: Institution): ItemPlano[] => {
  * Terapias o Bronze começa em 65, e prometer "faltam X para o Prata" com a
  * régua da Educação Básica daria uma meta errada.
  */
-export const proximoNivel = (inst: Institution) => {
+export const proximoNivel = (
+  inst: Institution,
+  efetivo?: { nota: number | null; modelo: ModeloCertificacao },
+) => {
   const a = apuracoes.get(inst.id);
-  if (!a || a.nota === null) return null;
+  const nota = efetivo ? efetivo.nota : (a?.nota ?? null);
+  const modelo = efetivo?.modelo ?? a?.modelo;
+  if (nota === null || !modelo) return null;
 
-  const acima = [...a.modelo.faixas]
-    .sort((x, y) => x.minimo - y.minimo)
-    .find((f) => f.minimo > a.nota!);
+  const acima = [...modelo.faixas].sort((x, y) => x.minimo - y.minimo).find((f) => f.minimo > nota);
 
   if (!acima) return null;
-  return { nivel: acima.nivel, alvo: acima.minimo, faltam: acima.minimo - a.nota };
+  return { nivel: acima.nivel, alvo: acima.minimo, faltam: acima.minimo - nota };
 };
 
 /* ---------------------------------------------------------------------------
@@ -2317,11 +2351,22 @@ export const resumoDoConjunto = (lista: Institution[]) => {
 
 export type ResumoDoConjunto = ReturnType<typeof resumoDoConjunto>;
 
-/** Média por eixo no conjunto — mostra onde a rede inteira está fraca. */
-export const mediaPorEixo = (lista: Institution[]) =>
+/**
+ * Média por eixo no conjunto — mostra onde a rede inteira está fraca.
+ *
+ * `criteriosDe` permite ler as notas do selo efetivo em vez das da base, para
+ * que uma emissão feita na demonstração entre nesta média junto com a média
+ * geral do consolidado, e não só nela.
+ */
+export const mediaPorEixo = (
+  lista: Institution[],
+  criteriosDe: (i: Institution) => Criterio[] = (i) => i.criterios,
+) =>
   eixos.map((e) => {
     const notas = lista.flatMap((i) =>
-      i.criterios.filter((c) => c.nome === e.nome).map((c) => c.nota),
+      criteriosDe(i)
+        .filter((c) => c.nome === e.nome)
+        .map((c) => c.nota),
     );
     return {
       eixo: e.nome,
