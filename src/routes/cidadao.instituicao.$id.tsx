@@ -68,10 +68,12 @@ function Ficha() {
   // não enxerga essa garantia através do roteador.
   if (!inst) return null;
 
-  /* A ficha pública mostra só o que passou pela triagem: antes dela, um relato
-     é alegação que o SIS ainda não avaliou, e publicá-la nominalmente faria a
-     instituição carregar uma acusação não apurada. O bloco existe na cadeia
-     desde o recebimento — o que espera é a vitrine, não o registro. */
+  /* Denúncia não entra na ficha pública em nenhum estágio: acusação exposta em
+     vitrine derruba reputação antes de qualquer apuração, e um canal de escuta
+     que funciona assim convida ao ataque de imagem. O bloco existe na cadeia
+     desde o recebimento e a instituição o acompanha no portal — o que fica de
+     fora é a vitrine, não o registro. Só a suspensão do selo aparece aqui: é
+     decisão do SIS, e o que o selo afirma ao cidadão depende dela. */
   const historico = selo.registrosPublicos(inst);
   const situacao = selo.status(inst);
   const nivel = selo.nivel(inst);
@@ -254,9 +256,10 @@ function Ficha() {
                 </h2>
                 <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted-foreground">
                   Cadeia de eventos gravada em blockchain. Nenhum registro pode ser apagado ou
-                  reescrito, inclusive os desfavoráveis à instituição. Relatos que ainda não
-                  passaram pela triagem do SIS já estão na cadeia, mas não aparecem aqui: até serem
-                  avaliados, são alegação, não fato apurado.
+                  reescrito, inclusive os desfavoráveis à instituição. A apuração de denúncias corre
+                  no portal institucional e não aparece aqui: relato é alegação, e expô-la
+                  publicamente puniria a instituição antes da decisão do SIS. O que chega a esta
+                  ficha é a decisão — inclusive a suspensão do selo, quando ela acontece.
                 </p>
               </div>
             </div>
@@ -283,7 +286,9 @@ function Ficha() {
                         </span>
                         <time className="text-xs text-muted-foreground">{b.data}</time>
                       </div>
-                      <p className="mt-2 font-medium text-foreground">{b.evento}</p>
+                      <p className="mt-2 font-medium text-foreground">
+                        {b.eventoPublico ?? b.evento}
+                      </p>
                       <p className="mt-1.5 font-mono text-xs text-muted-foreground">
                         hash {b.hash}
                       </p>
@@ -302,7 +307,8 @@ function Ficha() {
             <div>
               <h2 className="text-xl font-bold text-primary">Identificou alguma irregularidade?</h2>
               <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
-                O registro é anônimo e fica gravado na cadeia desta instituição. Em caso de risco
+                O registro é anônimo e fica gravado na cadeia desta instituição, mas a apuração
+                corre no portal do SIS — nada do relato aparece nesta ficha. Em caso de risco
                 imediato, procure o Disque 100 ou a polícia.
               </p>
             </div>

@@ -24,7 +24,6 @@ import { Button } from "@/components/ui/button";
 import {
   denunciaEmAberto,
   denunciaPorProtocolo,
-  denunciaPublica,
   institutionPorId,
   nivelDaInstituicao,
   origemDaGravidade,
@@ -175,19 +174,19 @@ function Conteudo({ escopo, denuncia }: { escopo: Escopo; denuncia: Denuncia | n
           ))}
         </dl>
 
-        {/* Enquanto não há triagem, o caso está na cadeia mas não na ficha
-            pública. Dizer isso onde a instituição lê o caso evita a leitura de
-            que a plataforma publica acusação não apurada. */}
-        {!denunciaPublica(denuncia) && (
-          <p className="mt-4 flex items-start gap-2 rounded-lg border border-dashed bg-muted/40 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
-            <EyeOff className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-            <span>
-              Este relato já está gravado na cadeia, com bloco e hash próprios, mas ainda não
-              aparece na ficha pública da instituição: antes da triagem é alegação, não fato
-              apurado. A publicação acontece quando a gravidade é classificada.
-            </span>
-          </p>
-        )}
+        {/* O caso está na cadeia e não na ficha pública — em qualquer estágio.
+            Dizer isso onde a instituição lê o caso é o que sustenta a confiança
+            no canal: ela sabe que a plataforma não expõe acusação por apurar. */}
+        <p className="mt-4 flex items-start gap-2 rounded-lg border border-dashed bg-muted/40 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+          <EyeOff className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+          <span>
+            Este relato está gravado na cadeia, com bloco e hash próprios, e não aparece na ficha
+            pública da instituição em nenhum estágio — nem depois da triagem. Relato é alegação:
+            publicá-lo cobraria da instituição uma acusação que o SIS ainda não decidiu, e faria do
+            canal de escuta um instrumento de ataque de imagem. Da apuração, só a suspensão do selo
+            chega ao público, e sem citar este protocolo.
+          </span>
+        </p>
 
         <p className="mt-5 flex items-start gap-2 rounded-lg border border-dashed bg-muted/40 px-4 py-3 text-sm leading-relaxed">
           <Gavel className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />

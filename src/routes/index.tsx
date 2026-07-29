@@ -39,12 +39,14 @@ import {
 /**
  * Trecho de cadeia mostrado na seção de blockchain.
  *
- * Sai do mesmo livro que o portal exibe: emissão, denúncia e suspensão de uma
- * instituição real do protótipo, em ordem cronológica.
+ * Sai do mesmo livro que a ficha pública exibe: avaliação, emissão e suspensão
+ * de uma instituição real do protótipo, em ordem cronológica. Vem da lista
+ * pública de propósito — a home é vitrine, e a apuração de denúncia não passa
+ * por ela.
  */
 const cadeiaDeExemplo = [...registrosPublicosDaInstituicao("cur-007")]
   .reverse()
-  .filter((r) => r.tipo === "certificacao" || r.tipo === "denuncia" || r.tipo === "suspensao")
+  .filter((r) => r.tipo === "avaliacao" || r.tipo === "certificacao" || r.tipo === "suspensao")
   .filter((r, i, arr) => i === 0 || i === 1 || i === arr.length - 1)
   .slice(0, 3);
 
@@ -517,7 +519,9 @@ function Home() {
                       <p className="font-mono text-xs text-muted-foreground">
                         Bloco {b.bloco} · {b.data}
                       </p>
-                      <p className="truncate text-sm font-medium text-foreground">{b.evento}</p>
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {b.eventoPublico ?? b.evento}
+                      </p>
                     </div>
                     <code className="hidden shrink-0 font-mono text-xs text-muted-foreground sm:block">
                       {b.hash}

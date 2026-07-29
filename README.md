@@ -58,10 +58,10 @@ Além do selo principal, a instituição pode conquistar **subselos** por práti
 
 Cada certificação **vale 12 meses** e exige nova avaliação para ser renovada — o padrão precisa se sustentar no tempo, não apenas no dia da vistoria. O portal acompanha esse prazo: selo a menos de 90 dias do vencimento entra na fila de renovações da rede e do SIS.
 
-O resultado fica em um **portal público**, onde responsáveis consultam o histórico completo antes de decidir. O portal também abre um **canal de denúncia anônima**, transformando a fiscalização em algo permanente.
+O resultado fica em um **portal público**, onde responsáveis consultam o histórico de certificação antes de decidir. O portal também abre um **canal de denúncia anônima**, transformando a fiscalização em algo permanente.
 
 > [!NOTE]
-> **Denúncia entra na cadeia no envio; na vitrine, só depois da triagem.** O bloco é gravado no momento em que o relato chega, com hash próprio, e o denunciante recebe o protocolo na hora. A ficha pública, porém, só passa a exibir o caso quando a triagem do SIS classifica a gravidade: antes disso é alegação, não fato apurado, e publicá-la nominalmente faria a plataforma imputar à instituição algo que ela mesma ainda não verificou. O registro nunca espera; a exibição espera.
+> **Denúncia entra na cadeia no envio; na vitrine pública, nunca.** O bloco é gravado no momento em que o relato chega, com hash próprio, e o denunciante recebe o protocolo na hora. A apuração corre no portal institucional — é lá que a instituição acompanha cada etapa e o SIS decide. A ficha pública não exibe denúncia em nenhum estágio, nem depois da triagem: relato é alegação, e uma acusação em vitrine derruba a reputação de quem talvez não tenha feito nada, o que transformaria o canal de escuta em instrumento de ataque de imagem. O que chega ao cidadão é a decisão — inclusive a **suspensão do selo**, que aparece na ficha sem citar o protocolo que a originou.
 
 ## Por que blockchain
 

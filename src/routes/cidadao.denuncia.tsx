@@ -67,13 +67,13 @@ const garantias = [
     icon: Scale,
     titulo: "Encaminhamento devido",
     texto:
-      "A gravidade é definida na triagem do SIS, não por você: basta relatar o que viu. Denúncias com indício de crime são encaminhadas aos órgãos competentes, e o resultado da apuração também é publicado.",
+      "A gravidade é definida na triagem do SIS, não por você: basta relatar o que viu. Denúncias com indício de crime são encaminhadas aos órgãos competentes, e o efeito da apuração sobre o selo aparece na consulta pública.",
   },
   {
     icon: ShieldCheck,
-    titulo: "Publicação só após triagem",
+    titulo: "Apuração fora da vitrine",
     texto:
-      "O relato entra na cadeia no momento em que você envia, mas a ficha pública da instituição só passa a exibi-lo depois da triagem. Isso protege quem denuncia de ver o caso arquivado por vício de forma, e a instituição de carregar publicamente uma acusação ainda não apurada.",
+      "O relato entra na cadeia no momento em que você envia, mas nunca aparece na ficha pública da instituição — nem depois da triagem. Publicar acusação por apurar exporia a instituição antes de qualquer decisão e faria deste canal uma arma de ataque à imagem. O que o cidadão vê é a decisão: se o selo for suspenso, a suspensão aparece na ficha.",
   },
 ];
 

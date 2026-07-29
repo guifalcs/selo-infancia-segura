@@ -2027,14 +2027,21 @@ export const denunciaEmAberto = (d: Denuncia) =>
 export const denunciaAtrasada = (d: Denuncia) => denunciaEmAberto(d) && jaPassou(d.prazo);
 
 /**
- * Denúncia já triada e ainda em aberto.
+ * Etapa de apuração que a ficha pública exibe: só a suspensão do selo.
  *
- * A ficha pública só publica o que passou pela triagem: antes dela, o relato é
- * uma alegação que o SIS ainda não avaliou, e a cadeia registra o recebimento
- * sem que a instituição carregue publicamente uma acusação não apurada. O
- * evento existe desde o primeiro minuto; a visibilidade é que espera.
+ * Denúncia nenhuma aparece na vitrine pública, nem depois da triagem. Um relato
+ * publicado nominalmente é uma acusação pendurada na porta da instituição, e a
+ * ficha pública é justamente onde ela mais custa: bastaria um punhado de
+ * relatos infundados para derrubar a reputação de quem não fez nada — o canal
+ * de escuta viraria arma de ataque de imagem, e o incentivo a usá-lo assim
+ * estaria dado. A apuração pertence ao portal institucional, onde a instituição
+ * responde e o SIS decide.
+ *
+ * A suspensão é exceção porque não é relato: é decisão tomada pelo SIS ao fim
+ * da apuração, e afeta diretamente o que o selo afirma a quem consulta. Sem ela
+ * a ficha mostraria o selo esmaecido sem dizer por quê.
  */
-export const denunciaPublica = (d: Denuncia) => d.gravidade !== null;
+export const etapaPublica = (e: EtapaDenuncia) => e.titulo.startsWith("Certificação suspensa");
 
 /* ---------------------------------------------------------------------------
  * Livro de registros.
@@ -2053,10 +2060,15 @@ export type RegistroBlockchain = {
    */
   referencia: string;
   /**
-   * Visível na consulta pública. Falso apenas para etapa de denúncia ainda não
-   * triada: o bloco existe e é auditável, mas a ficha pública não o exibe.
+   * Visível na consulta pública. Falso para etapa de apuração de denúncia: o
+   * bloco existe e é auditável no portal, mas a vitrine pública não o exibe.
    */
   publico: boolean;
+  /**
+   * Texto para a ficha pública, quando o interno cita a denúncia que originou o
+   * bloco. Só a suspensão precisa: ela é pública, o protocolo não.
+   */
+  eventoPublico?: string;
 };
 
 const rotuloTipoAvaliacao: Record<Avaliacao["tipo"], RegistroBlockchain["tipo"]> = {
@@ -2072,6 +2084,7 @@ type RegistroBruto = {
   instituicaoId: string;
   chave: string;
   publico: boolean;
+  eventoPublico?: string;
 };
 
 /**
@@ -2120,25 +2133,33 @@ export const registros: RegistroBlockchain[] = (
         })),
       ),
     /* Cada etapa da apuração entra na cadeia — é isso que permite à instituição
-       acompanhar o andamento sem depender da palavra de quem apura. Etapa de
-       caso ainda não triado entra igual, mas fora da vitrine pública. */
+       acompanhar o andamento sem depender da palavra de quem apura. Todas ficam
+       fora da vitrine pública, menos a suspensão do selo; ver `etapaPublica`. */
     ...denuncias.flatMap((d) =>
-      d.andamento.map((e, i) => ({
-        evento: `Denúncia ${d.protocolo} · ${e.titulo}`,
-        data: e.data,
-        tipo: (e.titulo.startsWith("Certificação suspensa") ? "suspensao" : "denuncia") as
-          "suspensao" | "denuncia",
-        instituicaoId: d.instituicaoId,
-        chave: `${d.protocolo}:${i}`,
-        publico: denunciaPublica(d),
-      })),
+      d.andamento.map((e, i) => {
+        const suspensao = etapaPublica(e);
+        return {
+          evento: `Denúncia ${d.protocolo} · ${e.titulo}`,
+          // Publicamente a suspensão vale pelo que decidiu, não pelo relato que
+          // a originou: o protocolo é rastro de apuração e fica no portal.
+          eventoPublico: suspensao ? "Certificação suspensa por decisão do SIS" : undefined,
+          data: e.data,
+          tipo: (suspensao ? "suspensao" : "denuncia") as "suspensao" | "denuncia",
+          instituicaoId: d.instituicaoId,
+          chave: `${d.protocolo}:${i}`,
+          publico: suspensao,
+        };
+      }),
     ),
   ] satisfies RegistroBruto[]
 )
   // Ordem cronológica dá o número de bloco; depois invertemos para exibir o
   // mais recente primeiro, sem que o bloco deixe de crescer com o tempo.
   .sort((a, b) => ordemPorData(a.data) - ordemPorData(b.data) || a.chave.localeCompare(b.chave))
-  .map((r, idx) => ({
+  /* A anotação uniformiza o elemento: sem ela o `satisfies` deixa o tipo como
+     união das formas literais de cada origem, e `eventoPublico` — presente só
+     na de denúncia — não existiria nos outros ramos da união. */
+  .map((r: RegistroBruto, idx) => ({
     evento: r.evento,
     data: r.data,
     tipo: r.tipo,
@@ -2147,13 +2168,14 @@ export const registros: RegistroBlockchain[] = (
     hash: hashDemo(r.chave),
     referencia: r.chave,
     publico: r.publico,
+    eventoPublico: r.eventoPublico,
   }))
   .reverse();
 
 export const registrosDaInstituicao = (instituicaoId: string) =>
   registros.filter((r) => r.instituicaoId === instituicaoId);
 
-/** Só o que a ficha pública exibe: etapa de caso não triado fica de fora. */
+/** Só o que a ficha pública exibe: a apuração de denúncia fica de fora. */
 export const registrosPublicosDaInstituicao = (instituicaoId: string) =>
   registros.filter((r) => r.instituicaoId === instituicaoId && r.publico);
 

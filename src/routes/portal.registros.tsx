@@ -277,13 +277,13 @@ function Livro({ escopo }: { escopo: Escopo }) {
                       )}
                       <TableCell className="min-w-[16rem] text-sm font-medium leading-snug">
                         {r.evento}
-                        {/* O bloco existe e é auditável; o que espera a triagem é
-                            a exibição na ficha pública. Dizer isso aqui evita a
-                            leitura de que o registro foi omitido. */}
+                        {/* O bloco existe e é auditável aqui; o que não existe é
+                            a exibição na vitrine pública. Dizer isso na linha
+                            evita a leitura de que o registro foi omitido. */}
                         {!r.publico && (
                           <span className="mt-1 flex items-center gap-1 text-[11px] font-normal text-muted-foreground">
                             <EyeOff className="size-3 shrink-0" aria-hidden />
-                            gravado na cadeia, fora da ficha pública até a triagem
+                            gravado na cadeia, visível só no portal
                           </span>
                         )}
                       </TableCell>

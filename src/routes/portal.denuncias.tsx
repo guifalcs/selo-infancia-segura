@@ -11,7 +11,6 @@ import {
   denuncias,
   denunciaAtrasada,
   denunciaEmAberto,
-  denunciaPublica,
   institutionPorId,
   type Denuncia,
 } from "@/lib/mock-data";
@@ -107,6 +106,19 @@ function Fila({ escopo }: { escopo: Escopo }) {
           </div>
         }
       >
+        {/* A regra vale para a fila inteira, então mora no topo dela e não em
+            cada linha: repetir o aviso por caso viraria ruído sem informar
+            nada que a linha de baixo já não dissesse. */}
+        <p className="flex items-start gap-2 border-b bg-muted/30 px-5 py-3 text-xs leading-relaxed text-muted-foreground">
+          <EyeOff className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+          <span>
+            Nenhuma denúncia aparece na ficha pública da instituição, em nenhum estágio da apuração.
+            Os blocos existem e são auditáveis aqui; expor relato em vitrine puniria a instituição
+            antes da decisão do SIS e abriria a porta ao ataque de imagem por denúncia infundada. Da
+            apuração, só a suspensão do selo chega ao público — porque é decisão, não alegação.
+          </span>
+        </p>
+
         {lista.length === 0 ? (
           <Vazio>
             {doEscopo.length === 0
@@ -173,11 +185,6 @@ function ItemDaFila({
             <PrazoBadge prazo={d.prazo} />
           ) : (
             <span>Encerrada · {d.responsavel}</span>
-          )}
-          {!denunciaPublica(d) && (
-            <span className="inline-flex items-center gap-1">
-              <EyeOff className="size-3 shrink-0" aria-hidden /> fora da ficha pública até a triagem
-            </span>
           )}
         </div>
       </div>
