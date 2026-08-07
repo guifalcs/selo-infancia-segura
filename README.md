@@ -11,6 +11,19 @@ com histórico público e auditável.**
 
 ---
 
+## Equipe
+
+Projeto desenvolvido colaborativamente para o **Youth Challenge Blockchain 2026**, promovido pela UNICEF em parceria com a Blockchain.RIO.
+
+A equipe ficou entre as **10 finalistas** do desafio, alcançando o **8º lugar** na classificação final.
+
+- [Filipe](https://github.com/Filipe-glitch)
+- [Guilherme](https://github.com/guifalcs)
+- [Debora](https://github.com/deboralorayne)
+- [João](https://github.com/VictorBlesser)
+
+---
+
 ## O problema
 
 Quando uma família escolhe uma escola, creche, clínica, clube ou parque de diversões, ela decide praticamente no escuro. Não existe hoje uma forma padronizada e confiável de verificar se aquele lugar oferece um ambiente seguro e adequado ao público infantojuvenil.
